@@ -22,7 +22,6 @@ from more_itertools import unzip
 from sympy import Symbol
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError, UnitParseError
-from yt._maintenance.deprecation import issue_deprecation_warning
 from yt.data_objects.particle_filters import ParticleFilter, filter_registry
 from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.selection_objects.data_selection_objects import (
@@ -37,7 +36,6 @@ from yt.fields.fluid_fields import setup_gradient_fields
 from yt.frontends.stream.api import StreamFieldInfo, StreamHierarchy
 from yt.funcs import (
     iter_fields,
-    mylog,
     set_intersection,
     setdefaultattr,
     validate_3d_array,
@@ -294,7 +292,6 @@ class Dataset(abc.ABC):
                 stacklevel=2,
             )
         output_type_registry[cls.__name__] = cls
-        mylog.debug("Registering: %s as %s", cls.__name__, cls)
 
     def __init__(
         self,
@@ -395,17 +392,6 @@ class Dataset(abc.ABC):
     @property
     def directory(self):
         return os.path.dirname(self.filename)
-
-    @property
-    def fullpath(self):
-        issue_deprecation_warning(
-            "the Dataset.fullpath attribute is now aliased to Dataset.directory, "
-            "and all path attributes are now absolute. "
-            "Please use the directory attribute instead",
-            stacklevel=3,
-            since="4.1",
-        )
-        return self.directory
 
     @property
     def backup_filename(self):
@@ -684,10 +670,8 @@ class Dataset(abc.ABC):
             "cosmological_simulation",
         ]:
             if not hasattr(self, a):
-                mylog.error("Missing %s in parameter file definition!", a)
                 continue
             v = getattr(self, a)
-            mylog.info("Parameters: %-25s = %s", a, v)
         if hasattr(self, "cosmological_simulation") and self.cosmological_simulation:
             for a in [
                 "current_redshift",
@@ -697,16 +681,8 @@ class Dataset(abc.ABC):
                 "hubble_constant",
             ]:
                 if not hasattr(self, a):
-                    mylog.error("Missing %s in parameter file definition!", a)
                     continue
                 v = getattr(self, a)
-                mylog.info("Parameters: %-25s = %s", a, v)
-        if getattr(self, "_domain_override", False):
-            if any(self._periodicity):
-                mylog.warning(
-                    "A bounding box was explicitly specified, so we "
-                    "are disabling periodicity."
-                )
 
     @parallel_root_only
     def print_stats(self):
@@ -727,13 +703,9 @@ class Dataset(abc.ABC):
             self.field_info.setup_particle_fields(ptype)
         self.field_info.setup_fluid_index_fields()
         if "all" not in self.particle_types:
-            mylog.debug("Creating Particle Union 'all'")
             pu = ParticleUnion("all", list(self.particle_types_raw))
             nfields = self.add_particle_union(pu)
-            if nfields == 0:
-                mylog.debug("zero common fields: skipping particle union 'all'")
         if "nbody" not in self.particle_types:
-            mylog.debug("Creating Particle Union 'nbody'")
             ptypes = list(self.particle_types_raw)
             if hasattr(self, "_sph_ptypes"):
                 for sph_ptype in self._sph_ptypes:
@@ -746,8 +718,6 @@ class Dataset(abc.ABC):
                         nbody_ptypes.append(ptype)
                 pu = ParticleUnion("nbody", nbody_ptypes)
                 nfields = self.add_particle_union(pu)
-                if nfields == 0:
-                    mylog.debug("zero common fields, skipping particle union 'nbody'")
         self.field_info.setup_extra_union_fields()
         self.field_info.load_all_plugins(self.default_fluid_type)
         deps, unloaded = self.field_info.check_derived_fields()
@@ -800,59 +770,6 @@ class Dataset(abc.ABC):
         # backward compatibility layer:
         # turning off type-checker on a per-line basis
         cls: type[CoordinateHandler]
-
-        if isinstance(self.geometry, tuple):  # type: ignore [unreachable]
-            issue_deprecation_warning(  # type: ignore [unreachable]
-                f"Dataset object {self} has a tuple for its geometry attribute. "
-                "This is interpreted as meaning the first element is the actual geometry string, "
-                "and the second represents an arbitrary axis order. "
-                "This will stop working in a future version of yt.\n"
-                "If you're loading data using yt.load_* functions, "
-                "you should be able to clear this warning by using the axis_order keyword argument.\n"
-                "Otherwise, if your code relies on this behaviour, please reach out and open an issue:\n"
-                "https://github.com/yt-project/yt/issues/new\n"
-                "Also see https://github.com/yt-project/yt/pull/4244#discussion_r1063486520 for reference",
-                since="4.2",
-                stacklevel=2,
-            )
-            self.geometry, axis_order = self.geometry
-        elif callable(self.geometry):
-            issue_deprecation_warning(
-                f"Dataset object {self} has a class for its geometry attribute. "
-                "This was accepted in previous versions of yt but leads to undefined behaviour. "
-                "This will stop working in a future version of yt.\n"
-                "If you are relying on this behaviour, please reach out and open an issue:\n"
-                "https://github.com/yt-project/yt/issues/new",
-                since="4.2",
-                stacklevel=2,
-            )
-            cls = self.geometry  # type: ignore [assignment]
-
-        if type(self.geometry) is str:  # noqa: E721
-            issue_deprecation_warning(
-                f"Dataset object {self} has a raw string for its geometry attribute. "
-                "In yt>=4.2, a yt.geometry.geometry_enum.Geometry member is expected instead. "
-                "This will stop working in a future version of yt.\n",
-                since="4.2",
-                stacklevel=2,
-            )
-            self.geometry = Geometry(self.geometry.lower())
-        if isinstance(self.geometry, CoordinateHandler):
-            issue_deprecation_warning(
-                f"Dataset object {self} has a CoordinateHandler object for its geometry attribute. "
-                "In yt>=4.2, a yt.geometry.geometry_enum.Geometry member is expected instead. "
-                "This will stop working in a future version of yt.\n",
-                since="4.2",
-                stacklevel=2,
-            )
-            _class_name = type(self.geometry).__name__
-            if not _class_name.endswith("CoordinateHandler"):
-                raise RuntimeError(
-                    "Expected CoordinateHandler child class name to end with CoordinateHandler"
-                )
-            _geom_str = _class_name[: -len("CoordinateHandler")]
-            self.geometry = Geometry(_geom_str.lower())
-            del _class_name, _geom_str
 
         # end compatibility layer
         if not isinstance(self.geometry, Geometry):
@@ -959,13 +876,7 @@ class Dataset(abc.ABC):
         # otherwise add it first if it is in the filter_registry
         if filter.filtered_type not in self.known_filters.keys():
             if filter.filtered_type in filter_registry:
-                add_success = self.add_particle_filter(filter.filtered_type)
-                if add_success:
-                    mylog.info(
-                        "Added filter dependency '%s' for '%s'",
-                        filter.filtered_type,
-                        filter.name,
-                    )
+                self.add_particle_filter(filter.filtered_type)
 
         if not filter.available(self.derived_field_list):
             raise YTIllDefinedParticleFilter(
@@ -988,12 +899,6 @@ class Dataset(abc.ABC):
             if filter.name not in self.filtered_particle_types:
                 self.filtered_particle_types.append(filter.name)
             if hasattr(self, "_sph_ptypes"):
-                if filter.filtered_type == self._sph_ptypes[0]:
-                    mylog.warning(
-                        "It appears that you are filtering on an SPH field "
-                        "type. It is recommended to use 'gas' as the "
-                        "filtered particle type in this case instead."
-                    )
                 if filter.filtered_type in (self._sph_ptypes + ("gas",)):
                     self._sph_ptypes = self._sph_ptypes + (filter.name,)
             new_fields = self._setup_particle_types([filter.name])
@@ -1166,16 +1071,7 @@ class Dataset(abc.ABC):
         }[ext]
         val, x1, x2, x3 = method(field)
         coords = [x1, x2, x3]
-        mylog.info("%s value is %0.5e at %0.16f %0.16f %0.16f", ext, val, *coords)
         if to_array:
-            if any(x.units.is_dimensionless for x in coords):
-                mylog.warning(
-                    "dataset `%s` has angular coordinates. "
-                    "Use 'to_array=False' to preserve "
-                    "dimensionality in each coordinate.",
-                    str(self),
-                )
-
             # force conversion to length
             alt_coords = []
             for x in coords:
@@ -1193,7 +1089,6 @@ class Dataset(abc.ABC):
 
         This is a wrapper around _find_extremum
         """
-        mylog.debug("Searching for maximum value of %s", field)
         return self._find_extremum(field, "max", source=source, to_array=to_array)
 
     def find_min(self, field, source=None, to_array=True):
@@ -1202,7 +1097,6 @@ class Dataset(abc.ABC):
 
         This is a wrapper around _find_extremum
         """
-        mylog.debug("Searching for minimum value of %s", field)
         return self._find_extremum(field, "min", source=source, to_array=to_array)
 
     def find_field_values_at_point(self, fields, coords):
@@ -1663,12 +1557,7 @@ class Dataset(abc.ABC):
         if not self.units_override:
             return
 
-        mylog.warning(
-            "Overriding code units: Use this option only if you know that the "
-            "dataset doesn't define the units correctly or at all."
-        )
         for ukey, val in self.units_override.items():
-            mylog.info("Overriding %s: %s.", ukey, val)
             setattr(self, ukey, self.quan(val))
 
     _units = None
@@ -1827,11 +1716,6 @@ class Dataset(abc.ABC):
                 "force_override is only meant to be used with "
                 "derived fields, not on-disk fields."
             )
-        if not force_override and name in self.field_info:
-            mylog.warning(
-                "Field %s already exists. To override use `force_override=True`.",
-                name,
-            )
 
         self.field_info.add_field(
             name, function, sampling_type, force_override=force_override, **kwargs
@@ -1942,7 +1826,6 @@ class Dataset(abc.ABC):
         if method == "count":
             field_name = f"{ptype}_count"
             if ("deposit", field_name) in self.field_info:
-                mylog.warning("The deposited field %s already exists", field_name)
                 return ("deposit", field_name)
             else:
                 units = "dimensionless"
