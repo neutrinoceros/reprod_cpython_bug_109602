@@ -367,29 +367,12 @@ class Dataset(abc.ABC):
             return os.path.abspath(os.path.expanduser(self._input_filename))
 
     @property
-    def parameter_filename(self):
-        # historic alias
-        return self.filename
-
-    @property
     def basename(self):
         return os.path.basename(self.filename)
 
     @property
     def directory(self):
         return os.path.dirname(self.filename)
-
-    @property
-    def backup_filename(self):
-        name, _ext = os.path.splitext(self.filename)
-        return name + "_backup.gdf"
-
-    @cached_property
-    def unique_identifier(self) -> str:
-        retv = int(os.stat(self.parameter_filename)[ST_CTIME])
-        name_as_bytes = bytearray(map(ord, self.parameter_filename))
-        retv += fnv_hash(name_as_bytes)
-        return str(retv)
 
     @property
     def periodicity(self):
@@ -411,20 +394,6 @@ class Dataset(abc.ABC):
             raise TypeError("force_periodicity expected a boolean.")
         self._force_periodicity = val
 
-    @classmethod
-    def _missing_load_requirements(cls) -> list[str]:
-        # return a list of optional dependencies that are
-        # needed for the present class to function, but currently missing.
-        # returning an empty list means that all requirements are met
-        return [name for name in cls._load_requirements if not find_spec(name)]
-
-    # abstract methods require implementation in subclasses
-    @classmethod
-    @abc.abstractmethod
-    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
-        # A heuristic test to determine if the data format can be interpreted
-        # with the present frontend
-        return False
 
     @abc.abstractmethod
     def _parse_parameter_file(self):
@@ -2053,10 +2022,6 @@ class MinimalStreamDataset(Dataset):
             self.magnetic_unit = np.sqrt(
                 4 * np.pi * self.mass_unit / (self.time_unit**2 * self.length_unit)
             )
-
-    @classmethod
-    def _is_valid(cls, filename: str, *args, **kwargs) -> bool:
-        return False
 
     @property
     def _skip_cache(self):
