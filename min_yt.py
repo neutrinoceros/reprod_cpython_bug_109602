@@ -3253,35 +3253,6 @@ class Dataset(abc.ABC):
         return [n for n, v in set(self.field_info.items()).difference(orig)]
 
     @property
-    def particle_fields_by_type(self):
-        fields = defaultdict(list)
-        for field in self.field_list:
-            if field[0] in self.particle_types_raw:
-                fields[field[0]].append(field[1])
-        return fields
-
-    @property
-    def particles_exist(self):
-        for pt, f in itertools.product(self.particle_types_raw, self.field_list):
-            if pt == f[0]:
-                return True
-        return False
-
-    @property
-    def particle_type_counts(self):
-        self.index
-        if not self.particles_exist:
-            return {}
-
-        # frontends or index implementation can populate this dict while
-        # creating the index if they know particle counts at that time
-        if self._particle_type_counts is not None:
-            return self._particle_type_counts
-
-        self._particle_type_counts = self.index._get_particle_type_counts()
-        return self._particle_type_counts
-
-    @property
     def ires_factor(self):
         o2 = np.log2(self.refine_by)
         if o2 != int(o2):
