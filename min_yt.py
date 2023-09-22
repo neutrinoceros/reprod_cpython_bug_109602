@@ -30,7 +30,6 @@ from yt.config import ytcfg
 from yt.data_objects.data_containers import YTDataContainer
 from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
-from yt.data_objects.particle_filters import ParticleFilter, filter_registry
 from yt.data_objects.profiles import create_profile
 from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.selection_objects.data_selection_objects import (
@@ -48,9 +47,7 @@ from yt.frontends.ytdata.utilities import save_as_dataset
 from yt.funcs import (
     get_output_filename,
     iter_fields,
-    mylog,
     parse_center_array,
-    set_intersection,
 )
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import (
@@ -87,14 +84,11 @@ from yt.utilities.exceptions import (
     YTException,
     YTFieldNotFound,
     YTFieldNotParseable,
-    YTFieldTypeNotFound,
     YTFieldUnitError,
     YTFieldUnitParseError,
-    YTIllDefinedParticleFilter,
     YTNonIndexedDataContainer,
     YTSpatialFieldUnitError,
 )
-from yt.utilities.logger import ytLogger as mylog
 from yt.utilities.object_registries import data_object_registry
 from yt.utilities.on_demand_imports import _firefly as firefly
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
@@ -155,7 +149,6 @@ class YTDataContainer(abc.ABC):
         self._current_particle_type = "all"
         self._current_fluid_type = self.ds.default_fluid_type
         self.ds.objects.append(weakref.proxy(self))
-        mylog.debug("Appending object to %s (type: %s)", self.ds, type(self))
         self.field_data = YTFieldData()
         if self.ds.unit_system.has_current_mks:
             mag_unit = "T"
@@ -891,13 +884,6 @@ class YTDataContainer(abc.ABC):
                 ## read the available extra fields from yt
                 this_ptype_fields = self.ds.particle_fields_by_type[ptype]
 
-                ## load the extra fields and print them
-                for field in this_ptype_fields:
-                    if field not in fields_to_include:
-                        mylog.warning(
-                            "detected (but did not request) %s %s", ptype, field
-                        )
-
             field_arrays = []
             field_names = []
 
@@ -941,8 +927,6 @@ class YTDataContainer(abc.ABC):
             ## so that Firefly will correctly compute the binary
             ## headers
             if len(field_arrays) == 0:
-                if len(fields_to_include) > 0:
-                    mylog.warning("No additional fields specified for %s", ptype)
                 field_arrays = None
                 field_names = None
                 field_filter_flags = None
@@ -1764,14 +1748,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
                             )
                             dimensions = units.dimensions
 
-                        if fi.dimensions is None:
-                            mylog.warning(
-                                "Field %s was added without specifying units or dimensions, "
-                                "auto setting units to %r",
-                                fi.name,
-                                sunits or "dimensionless",
-                            )
-                        elif not dimensions_compare_equal(fi.dimensions, dimensions):
+                        if not dimensions_compare_equal(fi.dimensions, dimensions):
                             raise YTDimensionalityError(fi.dimensions, dimensions)
                         fi.units = sunits
                         fi.dimensions = dimensions
