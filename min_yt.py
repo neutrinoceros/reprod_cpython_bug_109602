@@ -3365,14 +3365,7 @@ class Dataset(abc.ABC):
                 fi[c].is_alias_to(fi[candidates[0]]) for c in candidates
             )
 
-            all_equivalent_particle_fields: bool
-            if (
-                not self.particle_types
-                or not self.particle_unions
-                or not self.particle_types_raw
-            ):
-                all_equivalent_particle_fields = False
-            elif all(ft in self.particle_types for ft in ftypes):
+            if all(ft in self.particle_types for ft in ftypes):
                 ptypes = ftypes
 
                 sub_types_list: list[set[str]] = []
@@ -3381,13 +3374,8 @@ class Dataset(abc.ABC):
                         sub_types_list.append({pt})
                     elif pt in self.particle_unions:
                         sub_types_list.append(set(self.particle_unions[pt].sub_types))
-                all_equivalent_particle_fields = all(
-                    st == sub_types_list[0] for st in sub_types_list
-                )
-            else:
-                all_equivalent_particle_fields = False
 
-            return not (all_aliases or all_equivalent_particle_fields)
+            return not all_aliases
 
         if _are_ambiguous(candidates):
             ft, fn = field_info.name
