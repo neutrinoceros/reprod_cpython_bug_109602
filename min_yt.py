@@ -407,16 +407,6 @@ class Dataset(abc.ABC):
                 v = self.arr(v, "code_length")
                 setattr(self, n, v)
 
-    def __reduce__(self):
-        args = (self._hash(),)
-        return (_reconstruct_ds, args)
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}: {self.parameter_filename}"
-
-    def __str__(self):
-        return self.basename
-
     def _hash(self):
         s = f"{self.basename};{self.current_time};{self.unique_identifier}"
         return hashlib.md5(s.encode("utf-8")).hexdigest()
