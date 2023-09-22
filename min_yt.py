@@ -1496,15 +1496,10 @@ class YTDataContainer(abc.ABC):
     def _field_type_state(self, ftype, finfo, obj=None):
         if obj is None:
             obj = self
-        old_particle_type = obj._current_particle_type
         old_fluid_type = obj._current_fluid_type
         fluid_types = self.ds.fluid_types
-        if finfo.sampling_type == "particle" and ftype not in fluid_types:
-            obj._current_particle_type = ftype
-        else:
-            obj._current_fluid_type = ftype
+        obj._current_fluid_type = ftype
         yield
-        obj._current_particle_type = old_particle_type
         obj._current_fluid_type = old_fluid_type
 
     def _determine_fields(self, fields):
@@ -1530,16 +1525,6 @@ class YTDataContainer(abc.ABC):
             ):
                 raise YTFieldNotFound((ftype, fname), self.ds)
 
-            # these tests are really insufficient as a field type may be valid, and the
-            # field name may be valid, but not the combination (field type, field name)
-            particle_field = finfo.sampling_type == "particle"
-            local_field = finfo.local_sampling
-            if local_field:
-                pass
-            elif particle_field and ftype not in self.ds.particle_types:
-                raise YTFieldTypeNotFound(ftype, ds=self.ds)
-            elif not particle_field and ftype not in self.ds.fluid_types:
-                raise YTFieldTypeNotFound(ftype, ds=self.ds)
             explicit_fields.append((ftype, fname))
 
         self.ds._determined_fields[str(fields)] = explicit_fields
@@ -1709,14 +1694,12 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
         # At this point, we want to figure out *all* our dependencies.
         fields_to_get = self._identify_dependencies(fields_to_get, self._spatial)
         # We now split up into readers for the types of fields
-        fluids, particles = [], []
+        fluids = []
         finfos = {}
         for field_key in fields_to_get:
             finfo = self.ds._get_field_info(field_key)
             finfos[field_key] = finfo
-            if finfo.sampling_type == "particle":
-                particles.append(field_key)
-            elif field_key not in fluids:
+            if field_key not in fluids:
                 fluids.append(field_key)
         # The _read method will figure out which fields it needs to get from
         # disk, and return a dict of those fields along with the fields that
@@ -1728,15 +1711,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
             self.field_data[f].convert_to_units(finfos[f].output_units)
 
-        read_particles, gen_particles = self.index._read_particle_fields(
-            particles, self, self._current_chunk
-        )
-
-        for f, v in read_particles.items():
-            self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
-            self.field_data[f].convert_to_units(finfos[f].output_units)
-
-        fields_to_generate += gen_fluids + gen_particles
+        fields_to_generate += gen_fluids
         self._generate_fields(fields_to_generate)
         for field in list(self.field_data.keys()):
             if field not in ofields:
