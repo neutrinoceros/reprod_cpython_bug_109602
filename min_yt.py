@@ -2647,7 +2647,6 @@ class StreamHandler:
 
 
 class Dataset(abc.ABC):
-    _load_requirements: list[str] = []
     default_fluid_type = "gas"
     default_field = ("gas", "density")
     fluid_types: tuple[FieldType, ...] = ("gas", "deposit", "index")
