@@ -372,23 +372,7 @@ class Dataset(abc.ABC):
 
     @property
     def periodicity(self):
-        if self._force_periodicity:
-            return (True, True, True)
-        elif getattr(self, "_domain_override", False):
-            # dataset loaded with a bounding box
-            return (False, False, False)
         return self._periodicity
-
-    def force_periodicity(self, val=True):
-        """
-        Override box periodicity to (True, True, True).
-        Use ds.force_periodicty(False) to use the actual box periodicity.
-        """
-        # This is a user-facing method that embrace a long-standing
-        # workaround in yt user codes.
-        if not isinstance(val, bool):
-            raise TypeError("force_periodicity expected a boolean.")
-        self._force_periodicity = val
 
 
     @abc.abstractmethod
