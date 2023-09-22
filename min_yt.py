@@ -476,10 +476,6 @@ class Dataset(abc.ABC):
             m = m.hexdigest()
         return m
 
-    @property
-    def _skip_cache(self):
-        return False
-
     @classmethod
     def _guess_candidates(cls, base, directories, files):
         """
@@ -2022,10 +2018,6 @@ class MinimalStreamDataset(Dataset):
             self.magnetic_unit = np.sqrt(
                 4 * np.pi * self.mass_unit / (self.time_unit**2 * self.length_unit)
             )
-
-    @property
-    def _skip_cache(self):
-        return True
 
     def _find_particle_types(self):
         particle_types = set()
