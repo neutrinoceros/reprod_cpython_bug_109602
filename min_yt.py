@@ -15,10 +15,10 @@ from functools import cached_property
 from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
-
+from yt.fields.field_functions import validate_field_function
+import yt.geometry.selection_routines
 import numpy as np
 import unyt as un
-import yt.geometry
 from more_itertools import always_iterable, unzip
 from sympy import Symbol
 from typing_extensions import assert_never
@@ -50,10 +50,6 @@ from yt.funcs import (
     mylog,
     parse_center_array,
     set_intersection,
-    validate_3d_array,
-    validate_center,
-    validate_object,
-    validate_sequence,
 )
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import (
@@ -2830,13 +2826,6 @@ class YTRegion(YTSelectionContainer3D):
         field_parameters=None,
         data_source=None,
     ):
-        if center is not None:
-            validate_center(center)
-        validate_3d_array(left_edge)
-        validate_3d_array(right_edge)
-        validate_sequence(fields)
-        validate_object(field_parameters, dict)
-        validate_object(data_source, YTSelectionContainer)
         YTSelectionContainer3D.__init__(self, center, ds, field_parameters, data_source)
         if not isinstance(left_edge, YTArray):
             self.left_edge = self.ds.arr(left_edge, "code_length", dtype="float64")
@@ -4021,15 +4010,6 @@ class Dataset(abc.ABC):
                 "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
             )
 
-    @classmethod
-    def _validate_units_override_keys(cls, units_override):
-        valid_keys = set(cls.default_units.keys())
-        invalid_keys_found = set(units_override.keys()) - valid_keys
-        if invalid_keys_found:
-            raise ValueError(
-                f"units_override contains invalid keys: {invalid_keys_found}"
-            )
-
     default_units = {
         "length_unit": "cm",
         "time_unit": "s",
@@ -4073,8 +4053,6 @@ class Dataset(abc.ABC):
         uo = {}
         if units_override is None:
             return uo
-
-        cls._validate_units_override_keys(units_override)
 
         for key in cls.default_units:
             try:
@@ -4271,8 +4249,6 @@ class Dataset(abc.ABC):
            on-disk fields.
 
         """
-        from yt.fields.field_functions import validate_field_function
-
         validate_field_function(function)
         self.index
         if force_override and name in self.index.field_list:
