@@ -279,20 +279,6 @@ class Dataset(abc.ABC):
     domain_width = MutableAttribute(True)
     domain_center = MutableAttribute(True)
 
-    def __new__(cls, filename=None, *args, **kwargs):
-        return object.__new__(cls)
-
-    def __init_subclass__(cls, *args, **kwargs):
-        super().__init_subclass__(*args, **kwargs)
-        if cls.__name__ in output_type_registry:
-            warnings.warn(
-                f"Overwriting {cls.__name__}, which was previously registered. "
-                "This is expected if you're importing a yt extension with a "
-                "frontend that was already migrated to the main code base.",
-                stacklevel=2,
-            )
-        output_type_registry[cls.__name__] = cls
-
     def __init__(
         self,
         filename: str,
