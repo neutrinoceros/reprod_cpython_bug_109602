@@ -107,29 +107,13 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 from yt.utilities.parameter_file_storage import NoParameterShelf
 
 
-def sanitize_weight_field(ds, field, weight):
-    field_object = ds._get_field_info(field)
+def sanitize_weight_field(weight):
     if weight is None:
-        if field_object.sampling_type == "particle":
-            if field_object.name[0] == "gas":
-                ptype = ds._sph_ptypes[0]
-            else:
-                ptype = field_object.name[0]
-            weight_field = (ptype, "particle_ones")
-        else:
-            weight_field = ("index", "ones")
+        weight_field = ("index", "ones")
     else:
         weight_field = weight
     return weight_field
 
-
-def _get_ipython_key_completion(ds):
-    # tuple-completion (ftype, fname) was added in IPython 8.0.0
-    # with earlier versions, completion works with fname only
-    # this implementation should work transparently with all IPython versions
-    tuple_keys = ds.field_list + ds.derived_field_list
-    fnames = list({k[1] for k in tuple_keys})
-    return tuple_keys + fnames
 
 
 class YTDataContainer(abc.ABC):
@@ -319,8 +303,6 @@ class YTDataContainer(abc.ABC):
             rv = self.ds.arr(self.field_data[key], fi.units)
         return rv
 
-    def _ipython_key_completions_(self):
-        return _get_ipython_key_completion(self.ds)
 
     def __setitem__(self, key, val):
         """
@@ -1198,7 +1180,7 @@ class YTDataContainer(abc.ABC):
         -------
         Scalar or YTProjection.
         """
-        weight_field = sanitize_weight_field(self.ds, field, weight)
+        weight_field = sanitize_weight_field(weight)
         if axis in self.ds.coordinates.axis_name:
             r = self.ds.proj(
                 field, axis, data_source=self, weight_field=weight_field, moment=2
@@ -1356,7 +1338,7 @@ class YTDataContainer(abc.ABC):
         ...     ("gas", "temperature"), axis=("index", "y"), weight=("gas", "density")
         ... )
         """
-        weight_field = sanitize_weight_field(self.ds, field, weight)
+        weight_field = sanitize_weight_field(weight)
         if axis in self.ds.coordinates.axis_name:
             r = self.ds.proj(field, axis, data_source=self, weight_field=weight_field)
         elif axis is None:
@@ -1430,7 +1412,7 @@ class YTDataContainer(abc.ABC):
         >>> column_density = reg.integrate(("gas", "density"), axis=("index", "z"))
         """
         if weight is not None:
-            weight_field = sanitize_weight_field(self.ds, field, weight)
+            weight_field = sanitize_weight_field( weight)
         else:
             weight_field = None
         if axis in self.ds.coordinates.axis_name:
@@ -3082,7 +3064,6 @@ class Dataset(abc.ABC):
         self.setup_cosmology()
         self._assign_unit_system(unit_system)
         self._setup_coordinate_handler(axis_order)
-        self.print_key_parameters()
         self._set_derived_attrs()
         # Because we need an instantiated class to check the ds's existence in
         # the cache, we move that check to here from __new__.  This avoids
@@ -3273,34 +3254,6 @@ class Dataset(abc.ABC):
             self.create_field_info()
             np.seterr(**oldsettings)
         return self._instantiated_index
-
-    @parallel_root_only
-    def print_key_parameters(self):
-        for a in [
-            "current_time",
-            "domain_dimensions",
-            "domain_left_edge",
-            "domain_right_edge",
-            "cosmological_simulation",
-        ]:
-            if not hasattr(self, a):
-                continue
-            getattr(self, a)
-        if hasattr(self, "cosmological_simulation") and self.cosmological_simulation:
-            for a in [
-                "current_redshift",
-                "omega_lambda",
-                "omega_matter",
-                "omega_radiation",
-                "hubble_constant",
-            ]:
-                if not hasattr(self, a):
-                    continue
-                getattr(self, a)
-
-    @parallel_root_only
-    def print_stats(self):
-        self.index.print_stats()
 
     @property
     def field_list(self):
