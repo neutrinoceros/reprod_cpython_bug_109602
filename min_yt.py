@@ -63,14 +63,7 @@ from yt.funcs import (
 )
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import (
-    CartesianCoordinateHandler,
-    CoordinateHandler,
-    CylindricalCoordinateHandler,
-    GeographicCoordinateHandler,
-    InternalGeographicCoordinateHandler,
-    PolarCoordinateHandler,
-    SpectralCubeCoordinateHandler,
-    SphericalCoordinateHandler,
+    CartesianCoordinateHandler
 )
 from yt.geometry.geometry_handler import Index
 from yt.geometry.selection_routines import compose_selector
@@ -2482,25 +2475,11 @@ class YTSelectionContainer3D(YTSelectionContainer):
         """
         Return the bounding box for this data container.
         """
-        geometry: Geometry = self.ds.geometry
-        if geometry is Geometry.CARTESIAN:
-            le, re = self._get_bbox()
-            le.convert_to_units("code_length")
-            re.convert_to_units("code_length")
-            return le, re
-        elif (
-            geometry is Geometry.CYLINDRICAL
-            or geometry is Geometry.POLAR
-            or geometry is Geometry.SPHERICAL
-            or geometry is Geometry.GEOGRAPHIC
-            or geometry is Geometry.INTERNAL_GEOGRAPHIC
-            or geometry is Geometry.SPECTRAL_CUBE
-        ):
-            raise NotImplementedError(
-                f"get_bbox is currently not implemented for {geometry=}!"
-            )
-        else:
-            assert_never(geometry)
+        le, re = self._get_bbox()
+        le.convert_to_units("code_length")
+        re.convert_to_units("code_length")
+        return le, re
+
 
     def volume(self):
         """
@@ -2929,42 +2908,7 @@ class Dataset(abc.ABC):
         self.field_info.find_dependencies(added)
 
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
-        # backward compatibility layer:
-        # turning off type-checker on a per-line basis
-        cls: type[CoordinateHandler]
-
-        # end compatibility layer
-        if not isinstance(self.geometry, Geometry):
-            raise TypeError(
-                "Expected dataset.geometry attribute to be of "
-                "type yt.geometry.geometry_enum.Geometry\n"
-                f"Got {self.geometry=} with type {type(self.geometry)}"
-            )
-
-        if self.geometry is Geometry.CARTESIAN:
-            cls = CartesianCoordinateHandler
-        elif self.geometry is Geometry.CYLINDRICAL:
-            cls = CylindricalCoordinateHandler
-        elif self.geometry is Geometry.POLAR:
-            cls = PolarCoordinateHandler
-        elif self.geometry is Geometry.SPHERICAL:
-            cls = SphericalCoordinateHandler
-            # It shouldn't be required to reset self.no_cgs_equiv_length
-            # to the default value (False) here, but it's still necessary
-            # see https://github.com/yt-project/yt/pull/3618
-            self.no_cgs_equiv_length = False
-        elif self.geometry is Geometry.GEOGRAPHIC:
-            cls = GeographicCoordinateHandler
-            self.no_cgs_equiv_length = True
-        elif self.geometry is Geometry.INTERNAL_GEOGRAPHIC:
-            cls = InternalGeographicCoordinateHandler
-            self.no_cgs_equiv_length = True
-        elif self.geometry is Geometry.SPECTRAL_CUBE:
-            cls = SpectralCubeCoordinateHandler
-        else:
-            assert_never(self.geometry)
-
-        self.coordinates = cls(self, ordering=axis_order)
+        self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 
     def _get_field_info(
         self,
@@ -4111,30 +4055,6 @@ class FieldInfoContainer(UserDict):
 
         if self.ds is None:
             return aliases_gallery
-
-        geometry: Geometry = self.ds.geometry
-        if (
-            geometry is Geometry.POLAR
-            or geometry is Geometry.CYLINDRICAL
-            or geometry is Geometry.SPHERICAL
-        ):
-            aliases: list[FieldName]
-            for field in sorted(self.field_list):
-                if field[0] in self.ds.particle_types:
-                    continue
-                args = known_other_fields.get(field[1], ("", [], None))
-                units, aliases, display_name = args
-                aliases_gallery.extend(aliases)
-        elif (
-            geometry is Geometry.CARTESIAN
-            or geometry is Geometry.GEOGRAPHIC
-            or geometry is Geometry.INTERNAL_GEOGRAPHIC
-            or geometry is Geometry.SPECTRAL_CUBE
-        ):
-            # nothing to do
-            pass
-        else:
-            assert_never(geometry)
         return aliases_gallery
 
     def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
@@ -4170,36 +4090,6 @@ class FieldInfoContainer(UserDict):
             axis_names = self.ds.coordinates.axis_order
             geometry: Geometry = self.ds.geometry
             for alias in aliases:
-                if (
-                    geometry is Geometry.POLAR
-                    or geometry is Geometry.CYLINDRICAL
-                    or geometry is Geometry.SPHERICAL
-                ):
-                    if alias[-2:] not in ["_x", "_y", "_z"]:
-                        to_convert = False
-                    else:
-                        for suffix in ["x", "y", "z"]:
-                            if f"{alias[:-2]}_{suffix}" not in aliases_gallery:
-                                to_convert = False
-                                break
-                        to_convert = True
-                    if to_convert:
-                        if alias[-2:] == "_x":
-                            alias = f"{alias[:-2]}_{axis_names[0]}"
-                        elif alias[-2:] == "_y":
-                            alias = f"{alias[:-2]}_{axis_names[1]}"
-                        elif alias[-2:] == "_z":
-                            alias = f"{alias[:-2]}_{axis_names[2]}"
-                elif (
-                    geometry is Geometry.CARTESIAN
-                    or geometry is Geometry.GEOGRAPHIC
-                    or geometry is Geometry.INTERNAL_GEOGRAPHIC
-                    or geometry is Geometry.SPECTRAL_CUBE
-                ):
-                    # nothing to do
-                    pass
-                else:
-                    assert_never(geometry)
                 self.alias((ftype, alias), field)
 
     @staticmethod
@@ -4658,7 +4548,6 @@ class MinimalStreamDataset(Dataset):
 
     def __init__(self, *, stream_handler):
         self.fluid_types += ("stream",)
-        self.geometry = Geometry.CARTESIAN
         self.stream_handler = stream_handler
         name = f"InMemoryParameterFile_{uuid.uuid4().hex}"
 
