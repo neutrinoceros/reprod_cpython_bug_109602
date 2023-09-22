@@ -15,10 +15,10 @@ from functools import cached_property
 from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Optional, Union
-from yt.fields.field_functions import validate_field_function
-import yt.geometry.selection_routines
+
 import numpy as np
 import unyt as un
+import yt.geometry.selection_routines
 from more_itertools import always_iterable, unzip
 from sympy import Symbol
 from typing_extensions import assert_never
@@ -40,6 +40,7 @@ from yt.data_objects.static_output import _cached_datasets, _ds_store
 from yt.data_objects.unions import ParticleUnion
 from yt.fields.derived_field import DerivedField, ValidateSpatial
 from yt.fields.field_exceptions import NeedsGridType
+from yt.fields.field_functions import validate_field_function
 from yt.fields.field_type_container import FieldTypeContainer
 from yt.fields.fluid_fields import setup_gradient_fields
 from yt.frontends.stream.api import StreamFieldInfo, StreamHierarchy
@@ -98,7 +99,6 @@ from yt.utilities.object_registries import data_object_registry
 from yt.utilities.on_demand_imports import _firefly as firefly
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
     ParallelAnalysisInterface,
-    parallel_root_only,
 )
 from yt.utilities.parameter_file_storage import NoParameterShelf
 
