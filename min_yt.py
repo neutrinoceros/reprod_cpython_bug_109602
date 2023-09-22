@@ -34,7 +34,6 @@ from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.static_output import _cached_datasets, _ds_store
 from yt.data_objects.unions import ParticleUnion
 from yt.fields.derived_field import (
-    DeprecatedFieldFunc,
     DerivedField,
     NullFunc,
     TranslationFunc,
@@ -2894,19 +2893,6 @@ class Dataset(abc.ABC):
                 f"properties are: {list(available_formats.keys())}"
             )
 
-    def setup_deprecated_fields(self):
-        from yt.fields.field_aliases import _field_name_aliases
-
-        added = []
-        for old_name, new_name in _field_name_aliases:
-            try:
-                fi = self._get_field_info(new_name)
-            except YTFieldNotFound:
-                continue
-            self.field_info.alias(("gas", old_name), fi.name)
-            added.append(("gas", old_name))
-        self.field_info.find_dependencies(added)
-
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 
@@ -4268,19 +4254,8 @@ class FieldInfoContainer(UserDict):
 
         self.field_aliases[alias_name] = original_name
         function = TranslationFunc(original_name)
-        if deprecate is not None:
-            self.add_deprecated_field(
-                alias_name,
-                function=function,
-                sampling_type=self[original_name].sampling_type,
-                display_name=self[original_name].display_name,
-                units=units,
-                since=deprecate[0],
-                removal=deprecate[1],
-                ret_name=original_name,
-            )
-        else:
-            self.add_field(
+
+        self.add_field(
                 alias_name,
                 function=function,
                 sampling_type=self[original_name].sampling_type,
@@ -4289,59 +4264,6 @@ class FieldInfoContainer(UserDict):
                 alias=self[original_name],
             )
 
-    def add_deprecated_field(
-        self,
-        name,
-        function,
-        sampling_type,
-        since,
-        removal=None,
-        ret_name=None,
-        **kwargs,
-    ):
-        """
-        Add a new field which is deprecated, along with supplemental metadata,
-        to the list of available fields.  This respects a number of arguments,
-        all of which are passed on to the constructor for
-        :class:`~yt.data_objects.api.DerivedField`.
-
-        Parameters
-        ----------
-        name : str
-           is the name of the field.
-        function : callable
-           A function handle that defines the field.  Should accept
-           arguments (field, data)
-        sampling_type : str
-           "cell" or "particle" or "local"
-        since : str
-            The version string marking when this field was deprecated.
-        removal : str
-            The version string marking when this field will be removed.
-        ret_name : str
-            The name of the field which will actually be returned, used
-            only by :meth:`~yt.fields.field_info_container.FieldInfoContainer.alias`.
-        units : str
-           A plain text string encoding the unit.  Powers must be in
-           python syntax (** instead of ^). If set to "auto" the units
-           will be inferred from the return value of the field function.
-        take_log : bool
-           Describes whether the field should be logged
-        validators : list
-           A list of :class:`FieldValidator` objects
-        vector_field : bool
-           Describes the dimensionality of the field.  Currently unused.
-        display_name : str
-           A name used in the plots
-        """
-        if ret_name is None:
-            ret_name = name
-        self.add_field(
-            name,
-            function=DeprecatedFieldFunc(ret_name, function, since, removal),
-            sampling_type=sampling_type,
-            **kwargs,
-        )
 
     def has_key(self, key):
         # This gets used a lot
