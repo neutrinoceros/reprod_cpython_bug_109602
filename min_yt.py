@@ -7,13 +7,11 @@ import itertools
 import os
 import time
 import uuid
-import warnings
 import weakref
 from collections import UserDict, defaultdict
 from functools import cached_property
 from importlib.util import find_spec
 from itertools import chain
-from stat import ST_CTIME
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
@@ -37,7 +35,6 @@ from yt.frontends.stream.api import StreamFieldInfo, StreamHierarchy
 from yt.funcs import (
     iter_fields,
     set_intersection,
-    setdefaultattr,
     validate_3d_array,
     validate_center,
     validate_object,
@@ -55,7 +52,7 @@ from yt.geometry.coordinates.api import (
     SphericalCoordinateHandler,
 )
 from yt.geometry.geometry_handler import Index
-from yt.units import UnitContainer, YTArray, _wrap_display_ytarray, dimensions
+from yt.units import UnitContainer, _wrap_display_ytarray, dimensions
 from yt.units.dimensions import current_mks
 from yt.units.unit_object import define_unit
 from yt.units.unit_registry import UnitRegistry
@@ -70,8 +67,7 @@ from yt.utilities.exceptions import (
     YTFieldNotParseable,
     YTIllDefinedParticleFilter,
 )
-from yt.utilities.lib.fnv_hash import fnv_hash
-from yt.utilities.object_registries import data_object_registry, output_type_registry
+from yt.utilities.object_registries import data_object_registry
 from yt.utilities.parallel_tools.parallel_analysis_interface import parallel_root_only
 from yt.utilities.parameter_file_storage import NoParameterShelf
 
@@ -622,7 +618,7 @@ class Dataset(abc.ABC):
         ]:
             if not hasattr(self, a):
                 continue
-            v = getattr(self, a)
+            getattr(self, a)
         if hasattr(self, "cosmological_simulation") and self.cosmological_simulation:
             for a in [
                 "current_redshift",
@@ -633,7 +629,7 @@ class Dataset(abc.ABC):
             ]:
                 if not hasattr(self, a):
                     continue
-                v = getattr(self, a)
+                getattr(self, a)
 
     @parallel_root_only
     def print_stats(self):
@@ -655,7 +651,7 @@ class Dataset(abc.ABC):
         self.field_info.setup_fluid_index_fields()
         if "all" not in self.particle_types:
             pu = ParticleUnion("all", list(self.particle_types_raw))
-            nfields = self.add_particle_union(pu)
+            self.add_particle_union(pu)
         if "nbody" not in self.particle_types:
             ptypes = list(self.particle_types_raw)
             if hasattr(self, "_sph_ptypes"):
@@ -668,7 +664,7 @@ class Dataset(abc.ABC):
                     if (ptype, "particle_mass") in self.field_info:
                         nbody_ptypes.append(ptype)
                 pu = ParticleUnion("nbody", nbody_ptypes)
-                nfields = self.add_particle_union(pu)
+                self.add_particle_union(pu)
         self.field_info.setup_extra_union_fields()
         self.field_info.load_all_plugins(self.default_fluid_type)
         deps, unloaded = self.field_info.check_derived_fields()
