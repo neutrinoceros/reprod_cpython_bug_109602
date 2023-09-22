@@ -411,57 +411,6 @@ class Dataset(abc.ABC):
         s = f"{self.basename};{self.current_time};{self.unique_identifier}"
         return hashlib.md5(s.encode("utf-8")).hexdigest()
 
-    @cached_property
-    def checksum(self):
-        """
-        Computes md5 sum of a dataset.
-
-        Note: Currently this property is unable to determine a complete set of
-        files that are a part of a given dataset. As a first approximation, the
-        checksum of :py:attr:`~parameter_file` is calculated. In case
-        :py:attr:`~parameter_file` is a directory, checksum of all files inside
-        the directory is calculated.
-        """
-
-        def generate_file_md5(m, filename, blocksize=2**20):
-            with open(filename, "rb") as f:
-                while True:
-                    buf = f.read(blocksize)
-                    if not buf:
-                        break
-                    m.update(buf)
-
-        m = hashlib.md5()
-        if os.path.isdir(self.parameter_filename):
-            for root, _, files in os.walk(self.parameter_filename):
-                for fname in files:
-                    fname = os.path.join(root, fname)
-                    generate_file_md5(m, fname)
-        elif os.path.isfile(self.parameter_filename):
-            generate_file_md5(m, self.parameter_filename)
-        else:
-            m = "notafile"
-
-        if hasattr(m, "hexdigest"):
-            m = m.hexdigest()
-        return m
-
-    @classmethod
-    def _guess_candidates(cls, base, directories, files):
-        """
-        This is a class method that accepts a directory (base), a list of files
-        in that directory, and a list of subdirectories.  It should return a
-        list of filenames (defined relative to the supplied directory) and a
-        boolean as to whether or not further directories should be recursed.
-
-        This function doesn't need to catch all possibilities, nor does it need
-        to filter possibilities.
-        """
-        return [], True
-
-    def close(self):  # noqa: B027
-        pass
-
     def __getitem__(self, key):
         """Returns units, parameters, or conversion_factors in that order."""
         return self.parameters[key]
