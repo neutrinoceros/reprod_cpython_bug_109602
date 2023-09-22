@@ -3252,22 +3252,7 @@ class Dataset(abc.ABC):
         for ptype in self.particle_types:
             self.field_info.setup_particle_fields(ptype)
         self.field_info.setup_fluid_index_fields()
-        if "all" not in self.particle_types:
-            pu = ParticleUnion("all", list(self.particle_types_raw))
-            self.add_particle_union(pu)
-        if "nbody" not in self.particle_types:
-            ptypes = list(self.particle_types_raw)
-            if hasattr(self, "_sph_ptypes"):
-                for sph_ptype in self._sph_ptypes:
-                    if sph_ptype in ptypes:
-                        ptypes.remove(sph_ptype)
-            if ptypes:
-                nbody_ptypes = []
-                for ptype in ptypes:
-                    if (ptype, "particle_mass") in self.field_info:
-                        nbody_ptypes.append(ptype)
-                pu = ParticleUnion("nbody", nbody_ptypes)
-                self.add_particle_union(pu)
+
         self.field_info.setup_extra_union_fields()
         self.field_info.load_all_plugins(self.default_fluid_type)
         deps, unloaded = self.field_info.check_derived_fields()
@@ -3354,77 +3339,6 @@ class Dataset(abc.ABC):
 
         self.coordinates = cls(self, ordering=axis_order)
 
-    def add_particle_union(self, union):
-        # No string lookups here, we need an actual union.
-        f = self.particle_fields_by_type
-
-        # find fields common to all particle types in the union
-        fields = set_intersection([f[s] for s in union if s in self.particle_types_raw])
-
-        if len(fields) == 0:
-            # don't create this union if no fields are common to all
-            # particle types
-            return len(fields)
-
-        for field in fields:
-            units = set()
-            for s in union:
-                # First we check our existing fields for units
-                funits = self._get_field_info((s, field)).units
-                # Then we override with field_units settings.
-                funits = self.field_units.get((s, field), funits)
-                units.add(funits)
-            if len(units) == 1:
-                self.field_units[union.name, field] = list(units)[0]
-        self.particle_types += (union.name,)
-        self.particle_unions[union.name] = union
-        fields = [(union.name, field) for field in fields]
-        new_fields = [_ for _ in fields if _ not in self.field_list]
-        self.field_list.extend(new_fields)
-        new_field_info_fields = [
-            _ for _ in fields if _ not in self.field_info.field_list
-        ]
-        self.field_info.field_list.extend(new_field_info_fields)
-        self.index.field_list = sorted(self.field_list)
-        # Give ourselves a chance to add them here, first, then...
-        # ...if we can't find them, we set them up as defaults.
-        new_fields = self._setup_particle_types([union.name])
-        self.field_info.find_dependencies(new_fields)
-        return len(new_fields)
-
-    def add_particle_filter(self, filter):
-        """Add particle filter to the dataset.
-
-        Add ``filter`` to the dataset and set up relevant derived_field.
-        It will also add any ``filtered_type`` that the ``filter`` depends on.
-
-        """
-        # This requires an index
-        self.index
-        # This is a dummy, which we set up to enable passthrough of "all"
-        # concatenation fields.
-        n = getattr(filter, "name", filter)
-        if isinstance(filter, str):
-            used = False
-            f = filter_registry.get(filter, None)
-            if f is None:
-                return False
-            used = self._setup_filtered_type(f)
-            if used:
-                filter = f
-        else:
-            used = self._setup_filtered_type(filter)
-
-        return True
-
-
-    def _setup_particle_types(self, ptypes=None):
-        df = []
-        if ptypes is None:
-            ptypes = self.ds.particle_types_raw
-        for ptype in set(ptypes):
-            df += self._setup_particle_type(ptype)
-        return df
 
     def _get_field_info(
         self,
