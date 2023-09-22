@@ -1678,10 +1678,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             finfo = self.ds.field_info[field]
 
             nfields.append(field)
-        for filter_type in apply_fields:
-            f = self.ds.known_filters[filter_type]
-            with f.apply(self):
-                self.get_data(apply_fields[filter_type])
+
         fields = nfields
         if len(fields) == 0:
             return
@@ -2961,7 +2958,6 @@ class Dataset(abc.ABC):
     coordinates = None
     storage_filename = None
     particle_unions: Optional[dict[ParticleType, ParticleUnion]] = None
-    known_filters: Optional[dict[ParticleType, ParticleFilter]] = None
     _index_class: type[Index]
     field_units: Optional[dict[AnyFieldKey, Unit]] = None
     derived_field_list = requires_index("derived_field_list")
@@ -3024,7 +3020,6 @@ class Dataset(abc.ABC):
         self.conversion_factors = {}
         self.parameters: dict[str, Any] = {}
         self.region_expression = self.r = RegionExpression(self)
-        self.known_filters = self.known_filters or {}
         self.particle_unions = self.particle_unions or {}
         self.field_units = self.field_units or {}
         self._determined_fields = {}
@@ -3409,7 +3404,6 @@ class Dataset(abc.ABC):
         # This is a dummy, which we set up to enable passthrough of "all"
         # concatenation fields.
         n = getattr(filter, "name", filter)
-        self.known_filters[n] = None
         if isinstance(filter, str):
             used = False
             f = filter_registry.get(filter, None)
@@ -3420,44 +3414,9 @@ class Dataset(abc.ABC):
                 filter = f
         else:
             used = self._setup_filtered_type(filter)
-        if not used:
-            self.known_filters.pop(n, None)
-            return False
-        self.known_filters[filter.name] = filter
+
         return True
 
-    def _setup_filtered_type(self, filter):
-        # Check if the filtered_type of this filter is known,
-        # otherwise add it first if it is in the filter_registry
-        if filter.filtered_type not in self.known_filters.keys():
-            if filter.filtered_type in filter_registry:
-                self.add_particle_filter(filter.filtered_type)
-
-        if not filter.available(self.derived_field_list):
-            raise YTIllDefinedParticleFilter(
-                filter, filter.missing(self.derived_field_list)
-            )
-        fi = self.field_info
-        fd = self.field_dependencies
-        available = False
-        for fn in self.derived_field_list:
-            if fn[0] == filter.filtered_type:
-                # Now we can add this
-                available = True
-                self.derived_field_list.append((filter.name, fn[1]))
-                fi[filter.name, fn[1]] = filter.wrap_func(fn, fi[fn])
-                # Now we append the dependencies
-                fd[filter.name, fn[1]] = fd[fn]
-        if available:
-            if filter.name not in self.particle_types:
-                self.particle_types += (filter.name,)
-            if hasattr(self, "_sph_ptypes"):
-                if filter.filtered_type in (self._sph_ptypes + ("gas",)):
-                    self._sph_ptypes = self._sph_ptypes + (filter.name,)
-            new_fields = self._setup_particle_types([filter.name])
-            deps, _ = self.field_info.check_derived_fields(new_fields)
-            self.field_dependencies.update(deps)
-        return available
 
     def _setup_particle_types(self, ptypes=None):
         df = []
