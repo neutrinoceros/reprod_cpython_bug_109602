@@ -3082,23 +3082,7 @@ class Dataset(abc.ABC):
         else:
             raise YTFieldNotParseable(field)
 
-        if ftype == "unknown":
-            candidates: list[FieldKey] = [
-                (ft, fn) for ft, fn in self.field_info if fn == fname
-            ]
-
-            # We also should check "all" for particles, which can show up if you're
-            # mixing deposition/gas fields with particle fields.
-            if hasattr(self, "_sph_ptype"):
-                to_guess = [self.default_fluid_type, "all"]
-            else:
-                to_guess = ["all", self.default_fluid_type]
-            to_guess += list(self.fluid_types) + list(self.particle_types)
-            for ftype in to_guess:
-                if (ftype, fname) in self.field_info:
-                    return self.field_info[ftype, fname], candidates
-
-        elif (ftype, fname) in self.field_info:
+        if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname], []
 
         raise YTFieldNotFound(field, ds=self)

@@ -11,7 +11,7 @@ def foo():
     )
 
     data_source = ds.all_data()
-    data_source["density"].min()
+    data_source["gas", "density"].min()
 
 
 NLOOPS = 200
