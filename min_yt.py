@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import functools
 import hashlib
@@ -21,15 +23,6 @@ from sympy import Symbol
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError, UnitParseError
 from yt._maintenance.deprecation import issue_deprecation_warning
-from yt._typing import (
-    AnyFieldKey,
-    AxisOrder,
-    FieldKey,
-    FieldType,
-    ImplicitFieldKey,
-    ParticleType,
-)
-from yt.config import ytcfg
 from yt.data_objects.particle_filters import ParticleFilter, filter_registry
 from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.selection_objects.data_selection_objects import (
@@ -80,7 +73,6 @@ from yt.utilities.exceptions import (
     YTIllDefinedParticleFilter,
 )
 from yt.utilities.lib.fnv_hash import fnv_hash
-from yt.utilities.minimal_representation import MinimalDataset
 from yt.utilities.object_registries import data_object_registry, output_type_registry
 from yt.utilities.parallel_tools.parallel_analysis_interface import parallel_root_only
 from yt.utilities.parameter_file_storage import NoParameterShelf
@@ -542,10 +534,6 @@ class Dataset(abc.ABC):
         if hasattr(m, "hexdigest"):
             m = m.hexdigest()
         return m
-
-    @property
-    def _mrep(self):
-        return MinimalDataset(self)
 
     @property
     def _skip_cache(self):
