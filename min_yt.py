@@ -1953,7 +1953,6 @@ class MinimalStreamDataset(Dataset):
         self.fluid_types += ("stream",)
         self.geometry = Geometry.CARTESIAN
         self.stream_handler = stream_handler
-        self._find_particle_types()
         name = f"InMemoryParameterFile_{uuid.uuid4().hex}"
 
         _cached_datasets[name] = self
@@ -2018,14 +2017,6 @@ class MinimalStreamDataset(Dataset):
             self.magnetic_unit = np.sqrt(
                 4 * np.pi * self.mass_unit / (self.time_unit**2 * self.length_unit)
             )
-
-    def _find_particle_types(self):
-        particle_types = set()
-        for k, v in self.stream_handler.particle_types.items():
-            if v:
-                particle_types.add(k[0])
-        self.particle_types = tuple(particle_types)
-        self.particle_types_raw = self.particle_types
 
 
 def load_uniform_grid(
