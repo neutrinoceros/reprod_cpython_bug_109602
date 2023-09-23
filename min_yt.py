@@ -19,7 +19,6 @@ from unyt.exceptions import UnitConversionError
 from yt.arraytypes import blankRecordArray
 from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
-from yt.data_objects.static_output import Dataset
 from yt.fields.derived_field import NullFunc, TranslationFunc
 from yt.fields.field_detector import FieldDetector
 from yt.fields.field_exceptions import FieldUnitsError, NeedsConfiguration
