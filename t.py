@@ -1,6 +1,6 @@
 import numpy as np
 
-from min_yt import load_uniform_grid, StreamHierarchy, StreamFieldInfo
+from min_yt import StreamFieldInfo, StreamHierarchy, load_uniform_grid
 
 
 def foo():
@@ -9,9 +9,7 @@ def foo():
         data={("gas", "density"): np.ones(shape)},
         domain_dimensions=shape,
     )
-    ds.index = StreamHierarchy(
-        ds, dataset_type=ds.dataset_type
-    )
+    ds.index = StreamHierarchy(ds, dataset_type=ds.dataset_type)
 
     # inline ds.create_field_info()
     ds.field_dependencies = {}
@@ -23,6 +21,7 @@ def foo():
 
     ds.field_info.load_all_plugins(ds.default_fluid_type)
     deps, unloaded = ds.field_info.check_derived_fields()
+
 
 NLOOPS = 300
 for i in range(NLOOPS):
