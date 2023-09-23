@@ -393,6 +393,9 @@ class Dataset:
 
         self.coordinates = CartesianCoordinateHandler(self)
 
+
+        self.arr = functools.partial(YTArray, registry=self.unit_registry)
+        self.quan = functools.partial(YTQuantity, registry=self.unit_registry)
         for attr in ("left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
@@ -408,21 +411,6 @@ class Dataset:
         else:
             raise YTFieldNotFound(field, ds=self)
 
-    _arr = None
-
-    @property
-    def arr(self):
-        if self._arr is not None:
-            return self._arr
-        self._arr = functools.partial(YTArray, registry=self.unit_registry)
-        return self._arr
-
-    _quan = None
-
-    @property
-    def quan(self):
-        self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
-        return self._quan
 
 
 def load_uniform_grid(
