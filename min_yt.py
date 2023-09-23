@@ -296,41 +296,6 @@ class Dataset(abc.ABC):
         # set attributes like ds.length_unit
         self._set_code_unit_attributes()
 
-        self.unit_registry.modify("code_length", self.length_unit)
-        self.unit_registry.modify("code_mass", self.mass_unit)
-        self.unit_registry.modify("code_time", self.time_unit)
-        vel_unit = getattr(self, "velocity_unit", self.length_unit / self.time_unit)
-        pressure_unit = getattr(
-            self,
-            "pressure_unit",
-            self.mass_unit / (self.length_unit * (self.time_unit) ** 2),
-        )
-        temperature_unit = getattr(self, "temperature_unit", 1.0)
-        density_unit = getattr(
-            self, "density_unit", self.mass_unit / self.length_unit**3
-        )
-        specific_energy_unit = getattr(self, "specific_energy_unit", vel_unit**2)
-        self.unit_registry.modify("code_velocity", vel_unit)
-        self.unit_registry.modify("code_temperature", temperature_unit)
-        self.unit_registry.modify("code_pressure", pressure_unit)
-        self.unit_registry.modify("code_density", density_unit)
-        self.unit_registry.modify("code_specific_energy", specific_energy_unit)
-        # Defining code units for magnetic fields are tricky because
-        # they have different dimensions in different unit systems, so we have
-        # to handle them carefully
-        # We have to cast this explicitly to MKS base units, otherwise
-        # unyt will convert it automatically to Tesla
-        value = self.magnetic_unit.to_value("sqrt(kg)/(sqrt(m)*s)")
-        dims = dimensions.magnetic_field_cgs
-
-        self.unit_registry.add("code_magnetic", value, dims)
-        # domain_width does not yet exist
-        if self.domain_left_edge is not None and self.domain_right_edge is not None:
-            DW = self.arr(self.domain_right_edge - self.domain_left_edge, "code_length")
-            self.unit_registry.add(
-                "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
-            )
-
     _arr = None
 
     @property
