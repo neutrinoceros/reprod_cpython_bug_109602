@@ -11,7 +11,6 @@ from itertools import chain
 
 import numpy as np
 from unyt import Unit
-from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
@@ -19,6 +18,105 @@ from yt.units.unit_systems import unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
+
+
+def _get_coord_fields(axi, units="code_length"):
+    def _dds(field, data):
+        rv = data.ds.arr(data.fwidth[..., axi].copy(), units)
+        return data._reshape_vals(rv)
+
+    def _coords(field, data):
+        rv = data.ds.arr(data.fcoords[..., axi].copy(), units)
+        return data._reshape_vals(rv)
+
+    return _dds, _coords
+
+
+def _get_vert_fields(axi, units="code_length"):
+    def _vert(field, data):
+        rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
+        return rv
+
+    return _vert
+
+
+class CartesianCoordinateHandler:
+    name = "cartesian"
+
+    def __init__(self, ds):
+        self.ds = weakref.proxy(ds)
+        self.axis_order = ("x", "y", "z")
+
+    def setup_fields(self, registry):
+        for axi, ax in enumerate(self.axis_order):
+            f1, f2 = _get_coord_fields(axi)
+            registry.add_field(
+                ("index", f"d{ax}"),
+                sampling_type="cell",
+                function=f1,
+                display_field=False,
+                units="code_length",
+            )
+
+            registry.add_field(
+                ("index", f"path_element_{ax}"),
+                sampling_type="cell",
+                function=f1,
+                display_field=False,
+                units="code_length",
+            )
+
+            registry.add_field(
+                ("index", f"{ax}"),
+                sampling_type="cell",
+                function=f2,
+                display_field=False,
+                units="code_length",
+            )
+
+            f3 = _get_vert_fields(axi)
+            registry.add_field(
+                ("index", f"vertex_{ax}"),
+                sampling_type="cell",
+                function=f3,
+                display_field=False,
+                units="code_length",
+            )
+
+        self._register_volume(registry)
+        self._check_fields(registry)
+
+    def _register_volume(self, registry):
+        def _cell_volume(field, data):
+            rv = data["index", "dx"].copy(order="K")
+            rv *= data["index", "dy"]
+            rv *= data["index", "dz"]
+            return rv
+
+        registry.add_field(
+            ("index", "cell_volume"),
+            sampling_type="cell",
+            function=_cell_volume,
+            display_field=False,
+            units="code_length**3",
+        )
+        registry.alias(("index", "volume"), ("index", "cell_volume"))
+
+    def _check_fields(self, registry):
+        registry.check_derived_fields(
+            [
+                ("index", "dx"),
+                ("index", "dy"),
+                ("index", "dz"),
+                ("index", "x"),
+                ("index", "y"),
+                ("index", "z"),
+                ("index", "cell_volume"),
+            ]
+        )
+
+    _x_pairs = (("x", "y"), ("y", "z"), ("z", "x"))
+    _y_pairs = (("x", "z"), ("y", "x"), ("z", "y"))
 
 
 def TranslationFunc(field_name):
