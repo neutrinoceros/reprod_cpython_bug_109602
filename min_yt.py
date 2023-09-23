@@ -93,18 +93,6 @@ class CartesianCoordinateHandler:
         )
         registry.alias(("index", "volume"), ("index", "cell_volume"))
 
-        registry.check_derived_fields(
-            [
-                ("index", "dx"),
-                ("index", "dy"),
-                ("index", "dz"),
-                ("index", "x"),
-                ("index", "y"),
-                ("index", "z"),
-                ("index", "cell_volume"),
-            ]
-        )
-
 
 def TranslationFunc(field_name):
     def _TranslationFunc(field, data):
