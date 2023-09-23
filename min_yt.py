@@ -11,7 +11,6 @@ from itertools import chain
 import numpy as np
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
-from yt.units.unit_systems import unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
@@ -388,12 +387,7 @@ class Dataset:
         self.domain_dimensions = stream_handler.domain_dimensions
         self.current_time = stream_handler.simulation_time
 
-        self.unit_system = unit_system_registry["cgs"]
-        self.unit_registry.unit_system = self.unit_system
-
         self.coordinates = CartesianCoordinateHandler(self)
-
-
         self.arr = functools.partial(YTArray, registry=self.unit_registry)
         self.quan = functools.partial(YTQuantity, registry=self.unit_registry)
         for attr in ("left_edge", "right_edge"):
@@ -410,7 +404,6 @@ class Dataset:
             return self.field_info[ftype, fname]
         else:
             raise YTFieldNotFound(field, ds=self)
-
 
 
 def load_uniform_grid(
@@ -470,8 +463,6 @@ def load_uniform_grid(
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
-    unit_system = registry.ds.unit_system
-
     def create_vector_fields(
         registry,
         basename,
@@ -489,10 +480,10 @@ def setup_fluid_fields(registry, ftype="gas", slice_info=None):
             (ftype, f"{basename}_spherical_radius"),
             sampling_type="local",
             function=foo_closure,
-            units=field_units,
+            units="cm/s",
         )
 
-    create_vector_fields(registry, "velocity", unit_system["velocity"], ftype)
+    create_vector_fields(registry, "velocity", ftype)
 
 
 MINIMAL_FIELD_PLUGINS = {"fluid": setup_fluid_fields}
