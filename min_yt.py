@@ -401,12 +401,7 @@ class Dataset:
     # map to (0, 0, 0)
     domain_offset = np.zeros(3, dtype="int64")
 
-    def __init__(
-        self,
-        *,
-        stream_handler,
-        default_species_fields=None,
-    ) -> None:
+    def __init__(self, *, stream_handler):
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
         self.filename = self.stream_handler.name
@@ -419,7 +414,6 @@ class Dataset:
         self.parameters = {}
         self.field_units = {}
         self._determined_fields = {}
-        self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
 
@@ -495,6 +489,7 @@ class Dataset:
     def quan(self):
         self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
         return self._quan
+
 
 def load_uniform_grid(
     *,
