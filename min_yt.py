@@ -20,20 +20,18 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-
-
 class CartesianCoordinateHandler:
     def __init__(self, ds):
         self.ds = weakref.proxy(ds)
 
     def setup_fields(self, registry):
-
         def _get_vert_fields(axi, units="code_length"):
             def _vert(field, data):
                 rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
                 return rv
 
             return _vert
+
         for axi, ax in enumerate("xyz"):
             f3 = _get_vert_fields(axi)
             registry.add_field(
