@@ -14,7 +14,7 @@ def foo():
     data_source["gas", "density"].min()
 
 
-NLOOPS = 100
+NLOOPS = 200
 for i in range(NLOOPS):
     foo()
     print(f"{i}/{NLOOPS}", end="\r")

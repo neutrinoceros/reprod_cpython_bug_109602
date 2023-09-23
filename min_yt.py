@@ -25,11 +25,10 @@ from yt.fields.derived_field import (
     TranslationFunc,
 )
 from yt.fields.field_exceptions import NeedsConfiguration
-from yt.fields.field_plugin_registry import FunctionName, field_plugins
+from yt.fields.field_plugin_registry import FunctionName, register_field_plugin
 from yt.fields.field_type_container import FieldTypeContainer
 from yt.frontends.stream.api import StreamHierarchy
 from yt.funcs import iter_fields, obj_length
-from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import UnitContainer, dimensions
@@ -43,6 +42,7 @@ from yt.utilities.exceptions import (
     YTDomainOverflow,
     YTFieldNotFound,
 )
+from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
 
 
@@ -312,7 +312,6 @@ class Dataset(abc.ABC):
     default_fluid_type = "gas"
     default_field = ("gas", "density")
     fluid_types: tuple[FieldType, ...] = ("gas", "deposit", "index")
-    geometry: Geometry = Geometry.CARTESIAN
     coordinates = None
     storage_filename = None
     _index_class: type[Index]
@@ -839,7 +838,7 @@ class FieldInfoContainer(UserDict):
 
     def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
         loaded = []
-        for n in sorted(field_plugins):
+        for n in sorted(MINIMAL_FIELD_PLUGINS):
             loaded += self.load_plugin(n, ftype)
         self.find_dependencies(loaded)
 
@@ -849,7 +848,7 @@ class FieldInfoContainer(UserDict):
         ftype: FieldType = "gas",
         skip_check: bool = False,
     ):
-        f = field_plugins[plugin_name]
+        f = MINIMAL_FIELD_PLUGINS[plugin_name]
         orig = set(self.items())
         f(self, ftype, slice_info=self.slice_info)
         loaded = [n for n, v in set(self.items()).difference(orig)]
@@ -1149,3 +1148,32 @@ def load_uniform_grid(
     handler.cosmology_simulation = 0
 
     return MinimalStreamDataset(stream_handler=handler)
+
+
+def setup_fluid_fields(registry, ftype="gas", slice_info=None):
+    unit_system = registry.ds.unit_system
+
+    def create_vector_fields(
+        registry,
+        basename,
+        field_units,
+        ftype="gas",
+    ) -> None:
+        axis_order = registry.ds.coordinates.axis_order
+
+        xn, yn, zn = ((ftype, f"{basename}_{ax}") for ax in axis_order)
+
+        def foo_closure(field, data):
+            obtain_relative_velocity_vector(data, (xn, yn, zn), f"bulk_{basename}")
+
+        registry.add_field(
+            (ftype, f"{basename}_spherical_radius"),
+            sampling_type="local",
+            function=foo_closure,
+            units=field_units,
+        )
+
+    create_vector_fields(registry, "velocity", unit_system["velocity"], ftype)
+
+
+MINIMAL_FIELD_PLUGINS = {"fluid": setup_fluid_fields}
