@@ -424,10 +424,10 @@ class Dataset(abc.ABC):
         deps, unloaded = self.field_info.check_derived_fields()
         self.field_dependencies.update(deps)
         self.fields = FieldTypeContainer(self)
-        self.index.field_list = sorted(self.field_list)
+        #self.index.field_list = sorted(self.field_list)
         # Now that we've detected the fields, set this flag so that
         # deprecated fields will be logged if they are used
-        self.fields_detected = True
+        #self.fields_detected = True
 
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
