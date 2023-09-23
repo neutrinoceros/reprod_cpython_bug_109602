@@ -204,99 +204,6 @@ class StreamHandler:
         return self.fields.all_fields
 
 
-class Dataset(abc.ABC):
-    default_fluid_type = "gas"
-    fluid_types = ("gas", "deposit", "index")
-    coordinates = None
-    storage_filename = None
-    _index_class: type[Index]
-    _particle_type_counts = None
-    _proj_type = "quad_proj"
-    _determined_fields = None
-
-    # the point in index space "domain_left_edge" doesn't necessarily
-    # map to (0, 0, 0)
-    domain_offset = np.zeros(3, dtype="int64")
-    _force_periodicity = False
-
-    def __init__(
-        self,
-        filename: str,
-        dataset_type: str | None = None,
-        default_species_fields=None,
-    ) -> None:
-        # We return early and do NOT initialize a second time if this file has
-        # already been initialized.
-        self.dataset_type = dataset_type
-        self.conversion_factors = {}
-        self.parameters = {}
-        self.field_units = {}
-        self._determined_fields = {}
-        self.default_species_fields = default_species_fields
-
-        self._input_filename: str = os.fspath(filename)
-
-        self.unit_registry = UnitRegistry(unit_system="cgs")
-        # 1 cm = 0.01 m
-        self.unit_registry.add("code_length", 0.01, dimensions.length)
-        # 1 g = 0.001 kg
-        self.unit_registry.add("code_mass", 0.001, dimensions.mass)
-        # 1 g/cm**3 = 1000 kg/m**3
-        self.unit_registry.add("code_density", 1000.0, dimensions.density)
-        # 1 erg/g = 1.0e-4 J/kg
-        self.unit_registry.add(
-            "code_specific_energy", 1.0e-4, dimensions.energy / dimensions.mass
-        )
-        # 1 s = 1 s
-        self.unit_registry.add("code_time", 1.0, dimensions.time)
-        # 1 K = 1 K
-        self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
-
-        self._parse_parameter_file()
-        self.unit_system = unit_system_registry["cgs"]
-        self.unit_registry.unit_system = self.unit_system
-
-        self.coordinates = CartesianCoordinateHandler(self)
-
-        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
-        self.domain_width = self.domain_right_edge - self.domain_left_edge
-        self.current_time = self.quan(self.current_time, "code_time")
-        for attr in ("center", "width", "left_edge", "right_edge"):
-            n = f"domain_{attr}"
-            v = getattr(self, n)
-            # Note that we don't add on _ipython_display_ here because
-            # everything is stored inside a MutableAttribute.
-            v = self.arr(v, "code_length")
-            setattr(self, n, v)
-
-        self.object_types = []
-        self.objects = []
-        self.plots = []
-
-    def _get_field_info(self, field, /):
-        ftype, fname = field
-        if (ftype, fname) in self.field_info:
-            return self.field_info[ftype, fname]
-        else:
-            raise YTFieldNotFound(field, ds=self)
-
-    _arr = None
-
-    @property
-    def arr(self):
-        if self._arr is not None:
-            return self._arr
-        self._arr = functools.partial(YTArray, registry=self.unit_registry)
-        return self._arr
-
-    _quan = None
-
-    @property
-    def quan(self):
-        self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
-        return self._quan
-
-
 class FieldInfoContainer(UserDict):
     known_other_fields: KnownFieldsT = ()
     known_particle_fields: KnownFieldsT = ()
@@ -481,12 +388,102 @@ class StreamFieldInfo(FieldInfoContainer):
         self.species_names = sorted(species_names)
 
 
-class MinimalStreamDataset(Dataset):
-    def __init__(self, *, stream_handler):
+class MinimalStreamDataset:
+    default_fluid_type = "gas"
+    fluid_types = ("gas", "deposit", "index")
+    coordinates = None
+    storage_filename = None
+    _index_class: type[Index]
+    _particle_type_counts = None
+    _proj_type = "quad_proj"
+    _determined_fields = None
+
+    # the point in index space "domain_left_edge" doesn't necessarily
+    # map to (0, 0, 0)
+    domain_offset = np.zeros(3, dtype="int64")
+    _force_periodicity = False
+
+    def __init__(
+        self,
+        *,
+        stream_handler,
+        default_species_fields=None,
+    ) -> None:
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
         self.filename = self.stream_handler.name
-        super().__init__(filename="1234567890", dataset_type="stream")
+        filename = "1234567890"
+        dataset_type = "stream"
+        # We return early and do NOT initialize a second time if this file has
+        # already been initialized.
+        self.dataset_type = dataset_type
+        self.conversion_factors = {}
+        self.parameters = {}
+        self.field_units = {}
+        self._determined_fields = {}
+        self.default_species_fields = default_species_fields
+
+        self._input_filename: str = os.fspath(filename)
+
+        self.unit_registry = UnitRegistry(unit_system="cgs")
+        # 1 cm = 0.01 m
+        self.unit_registry.add("code_length", 0.01, dimensions.length)
+        # 1 g = 0.001 kg
+        self.unit_registry.add("code_mass", 0.001, dimensions.mass)
+        # 1 g/cm**3 = 1000 kg/m**3
+        self.unit_registry.add("code_density", 1000.0, dimensions.density)
+        # 1 erg/g = 1.0e-4 J/kg
+        self.unit_registry.add(
+            "code_specific_energy", 1.0e-4, dimensions.energy / dimensions.mass
+        )
+        # 1 s = 1 s
+        self.unit_registry.add("code_time", 1.0, dimensions.time)
+        # 1 K = 1 K
+        self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
+
+        self._parse_parameter_file()
+        self.unit_system = unit_system_registry["cgs"]
+        self.unit_registry.unit_system = self.unit_system
+
+        self.coordinates = CartesianCoordinateHandler(self)
+
+        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
+        self.domain_width = self.domain_right_edge - self.domain_left_edge
+        self.current_time = self.quan(self.current_time, "code_time")
+        for attr in ("center", "width", "left_edge", "right_edge"):
+            n = f"domain_{attr}"
+            v = getattr(self, n)
+            # Note that we don't add on _ipython_display_ here because
+            # everything is stored inside a MutableAttribute.
+            v = self.arr(v, "code_length")
+            setattr(self, n, v)
+
+        self.object_types = []
+        self.objects = []
+        self.plots = []
+
+    def _get_field_info(self, field, /):
+        ftype, fname = field
+        if (ftype, fname) in self.field_info:
+            return self.field_info[ftype, fname]
+        else:
+            raise YTFieldNotFound(field, ds=self)
+
+    _arr = None
+
+    @property
+    def arr(self):
+        if self._arr is not None:
+            return self._arr
+        self._arr = functools.partial(YTArray, registry=self.unit_registry)
+        return self._arr
+
+    _quan = None
+
+    @property
+    def quan(self):
+        self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
+        return self._quan
 
     def _parse_parameter_file(self):
         self.domain_left_edge = self.stream_handler.domain_left_edge.copy()
