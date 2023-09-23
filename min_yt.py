@@ -463,10 +463,6 @@ class Dataset:
             v = self.arr(v, "code_length")
             setattr(self, n, v)
 
-        self.object_types = []
-        self.objects = []
-        self.plots = []
-
     def _get_field_info(self, field, /):
         ftype, fname = field
         if (ftype, fname) in self.field_info:
