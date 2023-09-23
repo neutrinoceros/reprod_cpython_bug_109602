@@ -23,7 +23,6 @@ def foo():
 
     ds.field_info.load_all_plugins(ds.default_fluid_type)
     deps, unloaded = ds.field_info.check_derived_fields()
-    ds.field_dependencies.update(deps)
 
 NLOOPS = 200
 for i in range(NLOOPS):
