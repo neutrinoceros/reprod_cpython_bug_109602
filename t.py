@@ -9,11 +9,7 @@ def foo():
         data={("gas", "density"): np.ones(shape)},
         domain_dimensions=shape,
     )
-    # inlined ds.all_data
     ds.index
-    c = (ds.domain_right_edge + ds.domain_left_edge) / 2.0
-    data_source = YTRegion(c, ds.domain_left_edge, ds.domain_right_edge, ds=ds)
-    data_source["gas", "density"].min()
 
 
 NLOOPS = 200
