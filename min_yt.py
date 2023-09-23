@@ -365,55 +365,6 @@ class YTDataContainer(abc.ABC):
             rv = uconcatenate(outputs)
         return rv
 
-    def _generate_particle_field(self, field):
-        # First we check the validator
-        ftype, fname = field
-        if self._current_chunk is None or self._current_chunk.chunk_type != "spatial":
-            gen_obj = self
-        else:
-            gen_obj = self._current_chunk.objs[0]
-        try:
-            finfo = self.ds._get_field_info(field)
-            finfo.check_available(gen_obj)
-        except NeedsGridType as ngt_exception:
-            if ngt_exception.ghost_zones != 0:
-                raise NotImplementedError from ngt_exception
-            size = self._count_particles(ftype)
-            rv = self.ds.arr(np.empty(size, dtype="float64"), finfo.units)
-            ind = 0
-            for _io_chunk in self.chunks([], "io", cache=False):
-                for _chunk in self.chunks(field, "spatial"):
-                    x, y, z = (self[ftype, f"particle_position_{ax}"] for ax in "xyz")
-                    if x.size == 0:
-                        continue
-                    mask = self._current_chunk.objs[0].select_particles(
-                        self.selector, x, y, z
-                    )
-                    if mask is None:
-                        continue
-                    # This requests it from the grid and does NOT mask it
-                    data = self[field][mask]
-                    rv[ind : ind + data.size] = data
-                    ind += data.size
-        else:
-            with self._field_type_state(ftype, finfo, gen_obj):
-                rv = self.ds._get_field_info(field)(gen_obj)
-        return rv
-
-    def _count_particles(self, ftype):
-        for (f1, _f2), val in self.field_data.items():
-            if f1 == ftype:
-                return val.size
-        size = 0
-        for _io_chunk in self.chunks([], "io", cache=False):
-            for _chunk in self.chunks([], "spatial"):
-                x, y, z = (self[ftype, f"particle_position_{ax}"] for ax in "xyz")
-                if x.size == 0:
-                    continue
-                size += self._current_chunk.objs[0].count_particles(
-                    self.selector, x, y, z
-                )
-        return size
 
     def _generate_container_field(self, field):
         raise NotImplementedError
