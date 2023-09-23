@@ -235,40 +235,8 @@ class Dataset(abc.ABC):
         self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
-        self._create_unit_registry("cgs")
 
-        self._parse_parameter_file()
-        self._unit_system_name = "cgs"
-        self.unit_system = unit_system_registry["cgs"]
-        self.unit_registry.unit_system = self.unit_system
-
-        self.coordinates = CartesianCoordinateHandler(self)
-        self._set_derived_attrs()
-        self.object_types = []
-        self.objects = []
-        self.plots = []
-
-    def _set_derived_attrs(self):
-        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
-        self.domain_width = self.domain_right_edge - self.domain_left_edge
-        self.current_time = self.quan(self.current_time, "code_time")
-        for attr in ("center", "width", "left_edge", "right_edge"):
-            n = f"domain_{attr}"
-            v = getattr(self, n)
-            # Note that we don't add on _ipython_display_ here because
-            # everything is stored inside a MutableAttribute.
-            v = self.arr(v, "code_length")
-            setattr(self, n, v)
-
-    def _get_field_info(self, field, /):
-        ftype, fname = field
-        if (ftype, fname) in self.field_info:
-            return self.field_info[ftype, fname]
-        else:
-            raise YTFieldNotFound(field, ds=self)
-
-    def _create_unit_registry(self, unit_system):
-        self.unit_registry = UnitRegistry(unit_system=unit_system)
+        self.unit_registry = UnitRegistry(unit_system="cgs")
         # 1 cm = 0.01 m
         self.unit_registry.add("code_length", 0.01, dimensions.length)
         # 1 g = 0.001 kg
@@ -283,6 +251,35 @@ class Dataset(abc.ABC):
         self.unit_registry.add("code_time", 1.0, dimensions.time)
         # 1 K = 1 K
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
+
+        self._parse_parameter_file()
+        self._unit_system_name = "cgs"
+        self.unit_system = unit_system_registry["cgs"]
+        self.unit_registry.unit_system = self.unit_system
+
+        self.coordinates = CartesianCoordinateHandler(self)
+
+        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
+        self.domain_width = self.domain_right_edge - self.domain_left_edge
+        self.current_time = self.quan(self.current_time, "code_time")
+        for attr in ("center", "width", "left_edge", "right_edge"):
+            n = f"domain_{attr}"
+            v = getattr(self, n)
+            # Note that we don't add on _ipython_display_ here because
+            # everything is stored inside a MutableAttribute.
+            v = self.arr(v, "code_length")
+            setattr(self, n, v)
+    
+        self.object_types = []
+        self.objects = []
+        self.plots = []
+
+    def _get_field_info(self, field, /):
+        ftype, fname = field
+        if (ftype, fname) in self.field_info:
+            return self.field_info[ftype, fname]
+        else:
+            raise YTFieldNotFound(field, ds=self)
 
     _arr = None
 
