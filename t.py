@@ -9,8 +9,10 @@ def foo():
         data={("gas", "density"): np.ones(shape)},
         domain_dimensions=shape,
     )
-
-    data_source = ds.all_data()
+    # inlined ds.all_data
+    ds.index
+    c = (ds.domain_right_edge + ds.domain_left_edge) / 2.0
+    data_source = ds.region(c, ds.domain_left_edge, ds.domain_right_edge)
     data_source["gas", "density"].min()
 
 

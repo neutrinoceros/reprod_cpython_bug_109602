@@ -629,16 +629,6 @@ class Dataset(abc.ABC):
         obj.__doc__ = base.__doc__
         setattr(self, name, obj)
 
-    # Now all the object related stuff
-    def all_data(self, **kwargs):
-        """
-        all_data is a wrapper to the Region object for creating a region
-        which covers the entire simulation domain.
-        """
-        self.index
-        c = (self.domain_right_edge + self.domain_left_edge) / 2.0
-        return self.region(c, self.domain_left_edge, self.domain_right_edge, **kwargs)
-
     def _assign_unit_system(
         self,
         # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
