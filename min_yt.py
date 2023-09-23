@@ -5,24 +5,30 @@ import functools
 import hashlib
 import itertools
 import os
+import sys
 import time
 import uuid
 import weakref
 from collections import UserDict, defaultdict
 from collections.abc import Callable
 from contextlib import contextmanager
-from functools import cached_property
+from functools import wraps
 from importlib.util import find_spec
+from io import StringIO
 from itertools import chain
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import yt.geometry.selection_routines
+import yt.utilities.logger
+from more_itertools import always_iterable
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
+from yt.config import ytcfg
 from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
+from yt.data_objects.image_array import ImageArray
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import (
     DerivedField,
@@ -45,7 +51,7 @@ from yt.units.dimensions import (
     current_mks,
     dimensionless,  # type: ignore
 )
-from yt.units.unit_registry import UnitRegistry
+from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import (
     create_code_unit_system,
     unit_system_registry,
@@ -57,10 +63,8 @@ from yt.utilities.exceptions import (
     YTDomainOverflow,
     YTFieldNotFound,
 )
+from yt.utilities.lib.quad_tree import QuadTree, merge_quadtrees
 from yt.utilities.object_registries import data_object_registry
-from yt.utilities.parallel_tools.parallel_analysis_interface import (
-    ParallelAnalysisInterface,
-)
 
 
 class YTDataContainer(abc.ABC):
@@ -158,23 +162,58 @@ class YTDataContainer(abc.ABC):
 
             finfo = self.ds._get_field_info(field)
             ftype, fname = finfo.name
-            # really ugly check to ensure that this field really does exist somewhere,
-            # in some naming convention, before returning it as a possible field type
-            if (
-                (ftype, fname) not in self.ds.field_info
-                and (ftype, fname) not in self.ds.field_list
-                and fname not in self.ds.field_list
-                and (ftype, fname) not in self.ds.derived_field_list
-                and fname not in self.ds.derived_field_list
-                and (ftype, fname) not in self._container_fields
-            ):
-                raise YTFieldNotFound((ftype, fname), self.ds)
-
             explicit_fields.append((ftype, fname))
 
         self.ds._determined_fields[str(fields)] = explicit_fields
         return explicit_fields
 
+
+def parallel_passthrough(func):
+    """
+    If we are not run in parallel, this function passes the input back as
+    output; otherwise, the function gets called.  Used as a decorator.
+    """
+
+    @wraps(func)
+    def passage(self, *args, **kwargs):
+        if not self._distributed:
+            return args[0]
+        return func(self, *args, **kwargs)
+
+    return passage
+
+
+class Communicator:
+    comm = None
+    _grids = None
+    _distributed = None
+    __tocast = "c"
+
+    def __init__(self, comm=None):
+        self.comm = comm
+        self._distributed = comm is not None and self.comm.size > 1
+
+class CommunicationSystem:
+    communicators: list["Communicator"] = []
+
+    def __init__(self):
+        self.communicators.append(Communicator(None))
+
+communication_system = CommunicationSystem()
+
+
+class ParallelAnalysisInterface:
+    comm = None
+    _grids = None
+    _distributed = None
+
+    def __init__(self, comm=None):
+        if comm is None:
+            self.comm = communication_system.communicators[-1]
+        else:
+            self.comm = comm
+        self._grids = self.comm._grids
+        self._distributed = self.comm._distributed
 
 class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     _locked = False
@@ -220,8 +259,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     def get_data(self, fields=None):
         if self._current_chunk is None:
             self.index._identify_base_chunk(self)
-        if fields is None:
-            return
         nfields = []
         defaultdict(list)
         for field in self._determine_fields(fields):
@@ -233,8 +270,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             nfields.append(field)
 
         fields = nfields
-        if len(fields) == 0:
-            return
         # Now we collect all our fields
         # Here is where we need to perform a validation step, so that if we
         # have a field requested that we actually *can't* yet get, we put it
@@ -247,11 +282,8 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             if field in self.field_data:
                 continue
             finfo = self.ds._get_field_info(field)
-            try:
-                finfo.check_available(self)
-            except NeedsGridType:
-                fields_to_generate.append(field)
-                continue
+            finfo.check_available(self)
+
             fields_to_get.append(field)
         if len(fields_to_get) == 0 and len(fields_to_generate) == 0:
             return
@@ -279,11 +311,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
             self.field_data[f].convert_to_units(finfos[f].output_units)
 
-    @contextmanager
-    def _field_lock(self):
-        self._locked = True
-        yield
-        self._locked = False
 
     @property
     def max_level(self):
@@ -291,7 +318,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
 
     @property
     def min_level(self):
-        return 0
+        return self.ds.min_level
 
 
 class YTSelectionContainer3D(YTSelectionContainer):
@@ -1210,7 +1237,6 @@ class MinimalStreamDataset(Dataset):
             dataset_type=self._dataset_type,
             unit_system="cgs",
         )
-
 
     def _parse_parameter_file(self):
         self.parameters["CurrentTimeIdentifier"] = time.time()
