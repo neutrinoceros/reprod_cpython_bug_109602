@@ -48,6 +48,7 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
 
 
+
 class DerivedField:
     """
     This is the base class used to describe a cell-by-cell derived field.
@@ -386,16 +387,10 @@ class YTRegion(YTDataContainer):
         # This will be pre-populated with spatial fields
         fields_to_generate = []
         for field in self._determine_fields(fields):
-            if field in self.field_data:
-                continue
             finfo = self.ds._get_field_info(field)
             finfo.check_available(self)
 
             fields_to_get.append(field)
-        if len(fields_to_get) == 0 and len(fields_to_generate) == 0:
-            return
-        elif self._locked:
-            raise GenerationInProgress(fields)
         # At this point, we want to figure out *all* our dependencies.
         fields_to_get = self._identify_dependencies(fields_to_get, self._spatial)
         # We now split up into readers for the types of fields
@@ -447,7 +442,6 @@ class StreamHandler:
         field_units,
         code_units,
         io=None,
-        periodicity=(True, True, True),
         cell_widths=None,
     ):
         self.left_edges = np.array(left_edges)
@@ -462,7 +456,6 @@ class StreamHandler:
         self.field_units = field_units
         self.code_units = code_units
         self.io = io
-        self.periodicity = periodicity
         self.cell_widths = cell_widths
         self.parameters = {}
 
@@ -647,26 +640,14 @@ class Dataset(abc.ABC):
         # is mks-like: i.e., it has a current with the same
         # dimensions as amperes.
         mks_system = False
-        mag_unit: Optional[unyt_quantity] = getattr(self, "magnetic_unit", None)
-        mag_dims = mag_unit.units.dimensions.free_symbols
-
-        if unit_system != "code":
-            # if the unit system is known, we can check if it
-            # has a "current_mks" unit
-            us = unit_system_registry[str(unit_system).lower()]
-            mks_system = us.base_units[current_mks] is not None
-        elif mag_dims and current_mks in mag_dims:
-            # if we're using the not-yet defined code unit system,
-            # then we check if the magnetic field unit has a SI
-            # current dimension in it
-            mks_system = True
+        us = unit_system_registry[str(unit_system).lower()]
+        mks_system = us.base_units[current_mks] is not None
 
         current_mks_unit = "A" if mks_system else None
         us = create_code_unit_system(
             self.unit_registry, current_mks_unit=current_mks_unit
         )
-        if unit_system != "code":
-            us = unit_system_registry[str(unit_system).lower()]
+        us = unit_system_registry[str(unit_system).lower()]
 
         self._unit_system_name: str = unit_system
 
@@ -755,17 +736,8 @@ class Dataset(abc.ABC):
                 "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
             )
 
-    _units = None
-    _unit_system_id = None
-
-    @property
-    def units(self):
-        current_uid = self.unit_registry.unit_system_id
-        if self._units is not None and self._unit_system_id == current_uid:
-            return self._units
-        self._unit_system_id = current_uid
-        self._units = UnitContainer(self.unit_registry)
-        return self._units
+    #_units = None
+    #_unit_system_id = None
 
     _arr = None
 
@@ -963,17 +935,9 @@ class FieldInfoContainer(UserDict):
             return
 
         kwargs.setdefault("ds", self.ds)
-
-        if (
-            not isinstance(name, str)
-            and obj_length(name) == 2
-            and all(isinstance(e, str) for e in name)
-        ):
-            self[name] = DerivedField(
+        self[name] = DerivedField(
                 name, sampling_type, function, alias=alias, **kwargs
             )
-        else:
-            raise ValueError(f"Expected name to be a tuple[str, str], got {name}")
 
     def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
         loaded = []
@@ -1097,13 +1061,6 @@ class FieldInfoContainer(UserDict):
             try:
                 fd = fi.get_dependencies(ds=self.ds)
             except (*whitelist, *greylist) as e:
-                if field in self._show_field_errors:
-                    raise
-                if not isinstance(e, YTFieldNotFound):
-                    # if we're doing field tests, raise an error
-                    # see yt.fields.tests.test_fields
-                    if hasattr(self.ds, "_field_test_dataset"):
-                        raise
                 self.pop(field)
                 continue
             # This next bit checks that we can't somehow generate everything.
@@ -1193,7 +1150,7 @@ class MinimalStreamDataset(Dataset):
         self.domain_right_edge = self.stream_handler.domain_right_edge.copy()
         self.refine_by = self.stream_handler.refine_by
         self.dimensionality = self.stream_handler.dimensionality
-        self._periodicity = self.stream_handler.periodicity
+        self._periodicity = (True, True, True)
         self.domain_dimensions = self.stream_handler.domain_dimensions
         self.current_time = self.stream_handler.simulation_time
         self.gamma = 5.0 / 3.0
