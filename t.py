@@ -23,7 +23,7 @@ def foo():
     deps, unloaded = ds.field_info.check_derived_fields()
 
 
-NLOOPS = 300
+NLOOPS = 500
 for i in range(1, NLOOPS + 1):
     foo()
     print(f"{i}/{NLOOPS}", end="\r")

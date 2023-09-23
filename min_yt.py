@@ -20,16 +20,6 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-def _get_coord_fields(axi, units="code_length"):
-    def _dds(field, data):
-        return data.ds.arr(data.fwidth[..., axi].copy(), units)
-
-    def _coords(field, data):
-        return data.ds.arr(data.fcoords[..., axi].copy(), units)
-
-    return _dds, _coords
-
-
 def _get_vert_fields(axi, units="code_length"):
     def _vert(field, data):
         rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
@@ -44,31 +34,6 @@ class CartesianCoordinateHandler:
 
     def setup_fields(self, registry):
         for axi, ax in enumerate("xyz"):
-            f1, f2 = _get_coord_fields(axi)
-            registry.add_field(
-                ("index", f"d{ax}"),
-                sampling_type="cell",
-                function=f1,
-                display_field=False,
-                units="code_length",
-            )
-
-            registry.add_field(
-                ("index", f"path_element_{ax}"),
-                sampling_type="cell",
-                function=f1,
-                display_field=False,
-                units="code_length",
-            )
-
-            registry.add_field(
-                ("index", f"{ax}"),
-                sampling_type="cell",
-                function=f2,
-                display_field=False,
-                units="code_length",
-            )
-
             f3 = _get_vert_fields(axi)
             registry.add_field(
                 ("index", f"vertex_{ax}"),
