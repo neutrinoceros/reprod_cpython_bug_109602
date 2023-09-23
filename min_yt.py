@@ -16,29 +16,30 @@ import numpy as np
 from more_itertools import always_iterable
 from unyt import Unit, UnitSystem
 from unyt.exceptions import UnitConversionError
-from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
+from yt.arraytypes import blankRecordArray
+from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
+from yt.data_objects.static_output import Dataset
 from yt.fields.derived_field import NullFunc, TranslationFunc
 from yt.fields.field_detector import FieldDetector
-from yt.fields.field_exceptions import (
-    FieldUnitsError,
-    NeedsConfiguration,
-)
+from yt.fields.field_exceptions import FieldUnitsError, NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName
-from yt.frontends.stream.api import StreamHierarchy
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import dimensions
+from yt.geometry.grid_geometry_handler import GridIndex
+from yt.units import YTQuantity, dimensions
 from yt.units.dimensions import current_mks, dimensionless
 from yt.units.unit_object import Unit  # type: ignore
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
+from yt.utilities.definitions import MAXLEVEL
 from yt.utilities.exceptions import (
     YTCoordinateNotImplemented,
     YTDomainOverflow,
     YTFieldNotFound,
 )
+from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
 
@@ -251,10 +252,6 @@ class Dataset(abc.ABC):
         self._setup_coordinate_handler(axis_order)
         self._set_derived_attrs()
         self._setup_classes()
-
-    @property
-    def periodicity(self):
-        return self._periodicity
 
     def _set_derived_attrs(self):
         self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
@@ -665,6 +662,154 @@ class FieldInfoContainer(UserDict):
         for field in self.ds.derived_field_list:
             if field[1] in non_log_fields:
                 self[field].take_log = False
+
+
+class GridIndex(Index, abc.ABC):
+    """The index class for patch and block AMR datasets."""
+
+    float_type = "float64"
+    _preload_implemented = False
+    _index_properties = (
+        "grid_left_edge",
+        "grid_right_edge",
+        "grid_levels",
+        "grid_particle_count",
+        "grid_dimensions",
+    )
+
+    def _setup_geometry(self):
+        self._count_grids()
+        self._initialize_grid_arrays()
+        self._parse_index()
+        self._populate_grid_objects()
+        self._initialize_level_stats()
+
+    def _initialize_grid_arrays(self):
+        self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
+        self.grid_left_edge = self.ds.arr(
+            np.zeros((self.num_grids, 3), self.float_type), "code_length"
+        )
+        self.grid_right_edge = self.ds.arr(
+            np.ones((self.num_grids, 3), self.float_type), "code_length"
+        )
+        self.grid_levels = np.zeros((self.num_grids, 1), "int32")
+        self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
+
+    def get_smallest_dx(self):
+        """
+        Returns (in code units) the smallest cell size in the simulation.
+        """
+        return self.select_grids(self.grid_levels.max())[0].dds[:].min()
+
+    def _initialize_level_stats(self):
+        # Now some statistics:
+        #   0 = number of grids
+        #   1 = number of cells
+        #   2 = blank
+        desc = {"names": ["numgrids", "numcells", "level"], "formats": ["int64"] * 3}
+        self.level_stats = blankRecordArray(desc, MAXLEVEL)
+        self.level_stats["level"] = list(range(MAXLEVEL))
+        self.level_stats["numgrids"] = [0 for i in range(MAXLEVEL)]
+        self.level_stats["numcells"] = [0 for i in range(MAXLEVEL)]
+        for level in range(self.max_level + 1):
+            self.level_stats[level]["numgrids"] = np.sum(self.grid_levels == level)
+            li = self.grid_levels[:, 0] == level
+            self.level_stats[level]["numcells"] = (
+                self.grid_dimensions[li, :].prod(axis=1).sum()
+            )
+
+    _grid_chunksize = 1000
+
+
+class StreamGrid(AMRGridPatch):
+    """
+    Class representing a single In-memory Grid instance.
+    """
+
+    __slots__ = ["proc_num"]
+    _id_offset = 0
+
+    def __init__(self, id, index):
+        """
+        Returns an instance of StreamGrid with *id*, associated with *filename*
+        and *index*.
+        """
+        # All of the field parameters will be passed to us as needed.
+        AMRGridPatch.__init__(self, id, filename=None, index=index)
+        self._children_ids = []
+        self._parent_id = -1
+        self.Level = -1
+
+    @property
+    def Parent(self):
+        return None
+
+
+class StreamHierarchy(GridIndex):
+    grid = StreamGrid
+
+    def __init__(self, ds, dataset_type=None):
+        self.dataset_type = dataset_type
+        self.float_type = "float64"
+        self.dataset = weakref.proxy(ds)  # for _obtain_enzo
+        self.stream_handler = ds.stream_handler
+        self.float_type = "float64"
+        self.directory = os.getcwd()
+        GridIndex.__init__(self, ds, dataset_type)
+
+    def _count_grids(self):
+        self.num_grids = self.stream_handler.num_grids
+
+    def _parse_index(self):
+        self.grid_dimensions = self.stream_handler.dimensions
+        self.grid_left_edge[:] = self.stream_handler.left_edges
+        self.grid_right_edge[:] = self.stream_handler.right_edges
+        self.grid_levels[:] = self.stream_handler.levels
+        self.min_level = self.grid_levels.min()
+        self.grid_procs = self.stream_handler.processor_ids
+        self.grid_particle_count[:] = self.stream_handler.particle_count
+        self.grid_cell_widths = None
+        self.grids = []
+        # We enumerate, so it's 0-indexed id and 1-indexed pid
+        for id in range(self.num_grids):
+            self.grids.append(self.grid(id, self))
+            self.grids[id].Level = self.grid_levels[id, 0]
+        reverse_tree = self.stream_handler.parent_ids.tolist()
+        # Initial setup:
+        for gid, pid in enumerate(reverse_tree):
+            if pid >= 0:
+                self.grids[gid]._parent_id = pid
+                self.grids[pid]._children_ids.append(self.grids[gid].id)
+
+        self.max_level = self.grid_levels.max()
+        temp_grids = np.empty(self.num_grids, dtype="object")
+        for i, grid in enumerate(self.grids):
+            grid.filename = None
+            grid._prepare_grid()
+            grid._setup_dx()
+            grid.proc_num = self.grid_procs[i]
+            temp_grids[i] = grid
+        self.grids = temp_grids
+
+    def _initialize_grid_arrays(self):
+        GridIndex._initialize_grid_arrays(self)
+        self.grid_procs = np.zeros((self.num_grids, 1), "int32")
+
+    def _detect_output_fields(self):
+        # NOTE: Because particle unions add to the actual field list, without
+        # having the keys in the field list itself, we need to double check
+        # here.
+        fl = set(self.stream_handler.get_fields())
+        fl.update(set(getattr(self, "field_list", [])))
+        self.field_list = list(fl)
+
+    def _populate_grid_objects(self):
+        for g in self.grids:
+            g._setup_dx()
+        self.max_level = self.grid_levels.max()
+
+    def _setup_data_io(self):
+        self.io = io_registry[self.dataset_type](self.ds)
 
 
 class StreamFieldInfo(FieldInfoContainer):
