@@ -10,7 +10,6 @@ import uuid
 import weakref
 from collections import UserDict, defaultdict
 from collections.abc import Callable
-from importlib.util import find_spec
 from itertools import chain
 from typing import Any, Literal, Optional, Union
 
@@ -39,7 +38,7 @@ from yt.funcs import (
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import UnitContainer, _wrap_display_ytarray, dimensions
+from yt.units import UnitContainer, dimensions
 from yt.units.dimensions import (
     current_mks,
     dimensionless,  # type: ignore
