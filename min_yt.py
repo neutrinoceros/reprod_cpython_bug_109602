@@ -400,7 +400,6 @@ class FieldInfoContainer(UserDict):
 
     def __init__(self, ds, field_list: list[FieldKey], slice_info=None):
         super().__init__()
-        self._show_field_errors: list[Exception] = []
         self.ds = ds
         # Now we start setting things up.
         self.field_list = field_list
