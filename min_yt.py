@@ -161,20 +161,6 @@ class YTDataContainer(abc.ABC):
         return explicit_fields
 
 
-def parallel_passthrough(func):
-    """
-    If we are not run in parallel, this function passes the input back as
-    output; otherwise, the function gets called.  Used as a decorator.
-    """
-
-    @wraps(func)
-    def passage(self, *args, **kwargs):
-        if not self._distributed:
-            return args[0]
-        return func(self, *args, **kwargs)
-
-    return passage
-
 
 class Communicator:
     comm = None
@@ -203,10 +189,7 @@ class ParallelAnalysisInterface:
     _distributed = None
 
     def __init__(self, comm=None):
-        if comm is None:
-            self.comm = communication_system.communicators[-1]
-        else:
-            self.comm = comm
+        self.comm = communication_system.communicators[-1]
         self._grids = self.comm._grids
         self._distributed = self.comm._distributed
 
