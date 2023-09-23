@@ -105,9 +105,6 @@ class CartesianCoordinateHandler:
             ]
         )
 
-    _x_pairs = (("x", "y"), ("y", "z"), ("z", "x"))
-    _y_pairs = (("x", "z"), ("y", "x"), ("z", "y"))
-
 
 def TranslationFunc(field_name):
     def _TranslationFunc(field, data):
