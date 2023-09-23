@@ -45,12 +45,10 @@ class DerivedField:
         sampling_type,
         function,
         units: Optional[Union[str, bytes, Unit]] = None,
-        validators=None,
         vector_field=False,
         display_field=True,
         not_in_all=False,
         display_name=None,
-        output_units=None,
         dimensions=None,
         ds=None,
         *,
@@ -68,16 +66,12 @@ class DerivedField:
         self.validators = []
 
         # handle units
-        self.units: Optional[Union[str, bytes, Unit]]
         if isinstance(units, str):
             self.units = units
         else:
             self.units = str(units)
 
-        if output_units is None:
-            output_units = self.units
-        self.output_units = output_units
-
+        self.output_units = self.units
         self.dimensions = dimensions
 
         if alias is None:
@@ -135,8 +129,6 @@ class StreamHandler:
         fields,
         field_units,
         code_units,
-        io=None,
-        cell_widths=None,
     ):
         self.left_edges = np.array(left_edges)
         self.right_edges = np.array(right_edges)
@@ -149,8 +141,8 @@ class StreamHandler:
         self.fields = fields
         self.field_units = field_units
         self.code_units = code_units
-        self.io = io
-        self.cell_widths = cell_widths
+        self.io = None
+        self.cell_widths = None
         self.parameters = {}
 
     def get_fields(self):
