@@ -11,6 +11,7 @@ from itertools import chain
 
 import numpy as np
 from unyt import Unit
+from yt.frontends.stream.io import IOHandlerStream
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
@@ -18,7 +19,6 @@ from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
-from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
@@ -486,7 +486,7 @@ class StreamHierarchy(GridIndex):
         self.field_list = list(fl)
 
     def _setup_data_io(self):
-        self.io = io_registry[self.dataset_type](self.ds)
+        self.io = IOHandlerStream(self.ds)
 
 
 class StreamFieldInfo(FieldInfoContainer):
