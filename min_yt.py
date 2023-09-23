@@ -26,7 +26,6 @@ from yt.fields.field_exceptions import (
 )
 from yt.fields.field_plugin_registry import FunctionName
 from yt.frontends.stream.api import StreamHierarchy
-from yt.funcs import validate_field_key
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
@@ -45,8 +44,6 @@ from yt.utilities.object_registries import data_object_registry
 
 
 class DerivedField:
-    _inherited_particle_filter = False
-
     def __init__(
         self,
         name: FieldKey,
@@ -65,7 +62,6 @@ class DerivedField:
         *,
         alias: Optional["DerivedField"] = None,
     ):
-        validate_field_key(name)
         self.name = name
         self.take_log = take_log
         self.display_name = display_name
