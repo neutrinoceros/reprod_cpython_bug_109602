@@ -25,7 +25,7 @@ from yt.fields.derived_field import (
     TranslationFunc,
 )
 from yt.fields.field_exceptions import NeedsConfiguration
-from yt.fields.field_plugin_registry import FunctionName, register_field_plugin
+from yt.fields.field_plugin_registry import FunctionName
 from yt.fields.field_type_container import FieldTypeContainer
 from yt.frontends.stream.api import StreamHierarchy
 from yt.funcs import iter_fields, obj_length
