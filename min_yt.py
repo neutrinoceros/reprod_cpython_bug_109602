@@ -172,23 +172,14 @@ class Communicator:
         self._distributed = comm is not None and self.comm.size > 1
 
 
-class CommunicationSystem:
-    communicators: list["Communicator"] = []
-
-    def __init__(self):
-        self.communicators.append(Communicator(None))
-
-
-communication_system = CommunicationSystem()
-
-
+GLOBAL_COMMUNICATOR = Communicator(None)
 class ParallelAnalysisInterface:
     comm = None
     _grids = None
     _distributed = None
 
     def __init__(self, comm=None):
-        self.comm = communication_system.communicators[-1]
+        self.comm = GLOBAL_COMMUNICATOR
         self._grids = self.comm._grids
         self._distributed = self.comm._distributed
 
