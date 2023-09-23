@@ -550,9 +550,6 @@ class GridIndex(Index, abc.ABC):
     def _setup_geometry(self):
         self._count_grids()
         self._initialize_grid_arrays()
-        self._parse_index()
-        self._populate_grid_objects()
-        self._initialize_level_stats()
 
     def _initialize_grid_arrays(self):
         self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
@@ -564,25 +561,6 @@ class GridIndex(Index, abc.ABC):
         )
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
-
-    def _initialize_level_stats(self):
-        # Now some statistics:
-        #   0 = number of grids
-        #   1 = number of cells
-        #   2 = blank
-        desc = {"names": ["numgrids", "numcells", "level"], "formats": ["int64"] * 3}
-        self.level_stats = blankRecordArray(desc, MAXLEVEL)
-        self.level_stats["level"] = list(range(MAXLEVEL))
-        self.level_stats["numgrids"] = [0 for i in range(MAXLEVEL)]
-        self.level_stats["numcells"] = [0 for i in range(MAXLEVEL)]
-        for level in range(self.max_level + 1):
-            self.level_stats[level]["numgrids"] = np.sum(self.grid_levels == level)
-            li = self.grid_levels[:, 0] == level
-            self.level_stats[level]["numcells"] = (
-                self.grid_dimensions[li, :].prod(axis=1).sum()
-            )
-
-    _grid_chunksize = 1000
 
 
 class StreamGrid(AMRGridPatch):
