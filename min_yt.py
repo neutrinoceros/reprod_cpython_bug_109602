@@ -10,7 +10,6 @@ import uuid
 import weakref
 from collections import UserDict, defaultdict
 from collections.abc import Callable
-from functools import wraps
 from importlib.util import find_spec
 from itertools import chain
 from typing import Any, Literal, Optional, Union
