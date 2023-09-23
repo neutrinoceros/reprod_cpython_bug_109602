@@ -147,8 +147,6 @@ class YTDataContainer(abc.ABC):
 
         return self.field_data[f]
 
-    _extrema_cache = None
-
     def _determine_fields(self, fields):
         if str(fields) in self.ds._determined_fields:
             return self.ds._determined_fields[str(fields)]
@@ -176,8 +174,6 @@ class YTDataContainer(abc.ABC):
 
         self.ds._determined_fields[str(fields)] = explicit_fields
         return explicit_fields
-
-    _tree = None
 
 
 class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
@@ -551,7 +547,7 @@ class Dataset(abc.ABC):
                 setattr(self, n, v)
 
     def _hash(self):
-        s = f"{self.basename};{self.current_time};{self.unique_identifier}"
+        s = f"{self.basename};{self.current_time};{123456789}"
         return hashlib.md5(s.encode("utf-8")).hexdigest()
 
     _instantiated_index = None
@@ -1207,22 +1203,14 @@ class MinimalStreamDataset(Dataset):
     def __init__(self, *, stream_handler):
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
-        name = f"InMemoryParameterFile_{uuid.uuid4().hex}"
-
+        self.filename = self.stream_handler.name
         Dataset.__init__(
             self,
-            name,
-            self._dataset_type,
+            filename=f"InMemoryParameterFile_{uuid.uuid4().hex}",
+            dataset_type=self._dataset_type,
             unit_system="cgs",
         )
 
-    @property
-    def filename(self):
-        return self.stream_handler.name
-
-    @cached_property
-    def unique_identifier(self) -> str:
-        return str(self.parameters["CurrentTimeIdentifier"])
 
     def _parse_parameter_file(self):
         self.parameters["CurrentTimeIdentifier"] = time.time()
@@ -1234,12 +1222,6 @@ class MinimalStreamDataset(Dataset):
         self.domain_dimensions = self.stream_handler.domain_dimensions
         self.current_time = self.stream_handler.simulation_time
         self.gamma = 5.0 / 3.0
-        self.parameters["EOSType"] = -1
-        self.parameters["CosmologyHubbleConstantNow"] = 1.0
-        self.parameters["CosmologyCurrentRedshift"] = 1.0
-        self.parameters["HydroMethod"] = -1
-        self.parameters.update(self.stream_handler.parameters)
-
         self.current_redshift = 0.0
         self.omega_lambda = 0.0
         self.omega_matter = 0.0
