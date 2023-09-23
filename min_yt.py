@@ -393,7 +393,6 @@ class Dataset(abc.ABC):
 
 
 class FieldInfoContainer(UserDict):
-    fallback = None
     known_other_fields: KnownFieldsT = ()
     known_particle_fields: KnownFieldsT = ()
     extra_union_fields: tuple[FieldKey, ...] = ()
@@ -421,13 +420,8 @@ class FieldInfoContainer(UserDict):
         sampling_type: str,
         *,
         alias=None,
-        force_override: bool = False,
         **kwargs,
     ) -> None:
-        # Handle the case where the field has already been added.
-        if not force_override and name in self:
-            return
-
         kwargs.setdefault("ds", self.ds)
         self[name] = DerivedField(name, sampling_type, function, alias=alias, **kwargs)
 
@@ -446,29 +440,19 @@ class FieldInfoContainer(UserDict):
         self.ds.derived_field_list = sorted(dfl)
         return loaded, unavailable
 
-    def add_output_field(self, name, sampling_type, **kwargs):
-        kwargs.setdefault("ds", self.ds)
-        self[name] = DerivedField(name, sampling_type, NullFunc, **kwargs)
-
     def alias(
         self,
         alias_name: FieldKey,
         original_name: FieldKey,
-        units: Optional[str] = None,
     ):
-        if units is None:
-            # We default to CGS here, but in principle, this can be pluggable
-            # as well.
+        # We default to CGS here, but in principle, this can be pluggable
+        # as well.
 
-            # self[original_name].units may be set to `None` at this point
-            # to signal that units should be autoset later
-            oru = self[original_name].units
-
-            u = Unit(oru, registry=self.ds.unit_registry)
-            if u.dimensions is not dimensionless:
-                units = str(self.ds.unit_system[u.dimensions])
-            else:
-                units = oru
+        # self[original_name].units may be set to `None` at this point
+        # to signal that units should be autoset later
+        oru = self[original_name].units
+        u = Unit(oru, registry=self.ds.unit_registry)
+        units = str(self.ds.unit_system[u.dimensions])
 
         self.field_aliases[alias_name] = original_name
         function = TranslationFunc(original_name)
@@ -485,7 +469,7 @@ class FieldInfoContainer(UserDict):
     def __contains__(self, key):
         if super().__contains__(key):
             return True
-        if self.fallback is None:
+        else:
             return False
 
     def check_derived_fields(self, fields_to_check=None):
@@ -703,12 +687,6 @@ class StreamFieldInfo(FieldInfoContainer):
             self.ds.stream_handler.field_units[field]
 
         self.species_names = sorted(species_names)
-
-    def add_output_field(self, name, sampling_type, **kwargs):
-        if name in self.ds.stream_handler.field_units:
-            kwargs["units"] = self.ds.stream_handler.field_units[name]
-        super().add_output_field(name, sampling_type, **kwargs)
-
 
 class MinimalStreamDataset(Dataset):
     _dataset_type = "stream"
