@@ -401,7 +401,6 @@ class FieldInfoContainer(UserDict):
     def __init__(self, ds, field_list: list[FieldKey], slice_info=None):
         super().__init__()
         self.ds = ds
-        # Now we start setting things up.
         self.field_list = field_list
         self.slice_info = slice_info
         self.field_aliases = {}
@@ -435,22 +434,11 @@ class FieldInfoContainer(UserDict):
     def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
         loaded = []
         for n in sorted(MINIMAL_FIELD_PLUGINS):
-            loaded += self.load_plugin(n, ftype)
-        self.find_dependencies(loaded)
+            f = MINIMAL_FIELD_PLUGINS[n]
+            orig = set(self.items())
+            f(self, ftype, slice_info=self.slice_info)
+            loaded += [n for n, v in set(self.items()).difference(orig)]
 
-    def load_plugin(
-        self,
-        plugin_name: FunctionName,
-        ftype: FieldType = "gas",
-        skip_check: bool = False,
-    ):
-        f = MINIMAL_FIELD_PLUGINS[plugin_name]
-        orig = set(self.items())
-        f(self, ftype, slice_info=self.slice_info)
-        loaded = [n for n, v in set(self.items()).difference(orig)]
-        return loaded
-
-    def find_dependencies(self, loaded):
         deps, unavailable = self.check_derived_fields(loaded)
         self.ds.field_dependencies.update(deps)
         # Note we may have duplicated
