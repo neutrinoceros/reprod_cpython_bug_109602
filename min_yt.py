@@ -21,14 +21,6 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-class IOHandlerStream:
-    def __init__(self, ds):
-        self.fields = ds.stream_handler.fields
-        self.field_units = ds.stream_handler.field_units
-        self.queue = defaultdict(dict)
-        self.ds = ds
-
-
 def TranslationFunc(field_name):
     def _TranslationFunc(field, data):
         # We do a bunch of in-place modifications, so we will copy this.
@@ -375,7 +367,7 @@ class StreamHierarchy(GridIndex):
         self.field_list = list(fl)
 
     def _setup_data_io(self):
-        self.io = IOHandlerStream(self.ds)
+        self.io = object()
 
 
 class StreamFieldInfo(FieldInfoContainer):
