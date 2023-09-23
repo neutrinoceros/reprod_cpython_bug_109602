@@ -361,17 +361,13 @@ class Dataset:
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
         self.filename = self.stream_handler.name
-        filename = "1234567890"
-        dataset_type = "stream"
         # We return early and do NOT initialize a second time if this file has
         # already been initialized.
-        self.dataset_type = dataset_type
+        self.dataset_type = "stream"
         self.conversion_factors = {}
         self.parameters = {}
         self.field_units = {}
         self._determined_fields = {}
-
-        self._input_filename: str = os.fspath(filename)
 
         self.unit_registry = UnitRegistry(unit_system="cgs")
         # 1 cm = 0.01 m
