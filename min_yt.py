@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import functools
-import hashlib
 import itertools
 import os
 import time
@@ -15,7 +14,6 @@ from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import yt.geometry.selection_routines
-import yt.utilities.logger
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
@@ -409,14 +407,6 @@ class Dataset(abc.ABC):
         self._setup_classes()
 
     @property
-    def basename(self):
-        return os.path.basename(self.filename)
-
-    @property
-    def directory(self):
-        return os.path.dirname(self.filename)
-
-    @property
     def periodicity(self):
         return self._periodicity
 
@@ -433,10 +423,6 @@ class Dataset(abc.ABC):
                 # everything is stored inside a MutableAttribute.
                 v = self.arr(v, "code_length")
                 setattr(self, n, v)
-
-    def _hash(self):
-        s = f"{self.basename};{self.current_time};{123456789}"
-        return hashlib.md5(s.encode("utf-8")).hexdigest()
 
     _instantiated_index = None
 
