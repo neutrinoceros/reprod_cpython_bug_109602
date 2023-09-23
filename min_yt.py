@@ -9,7 +9,6 @@ from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
-from unyt import Unit
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import unit_system_registry
@@ -244,15 +243,6 @@ class FieldInfoContainer(UserDict):
         return loaded, unavailable
 
     def alias(self, alias_name, original_name):
-        # We default to CGS here, but in principle, this can be pluggable
-        # as well.
-
-        # self[original_name].units may be set to `None` at this point
-        # to signal that units should be autoset later
-        oru = self[original_name].units
-        u = Unit(oru, registry=self.ds.unit_registry)
-        units = str(self.ds.unit_system[u.dimensions])
-
         self.field_aliases[alias_name] = original_name
         function = TranslationFunc(original_name)
 
@@ -261,7 +251,7 @@ class FieldInfoContainer(UserDict):
             function=function,
             sampling_type=self[original_name].sampling_type,
             display_name=self[original_name].display_name,
-            units=units,
+            units="cm",
             alias=self[original_name],
         )
 
