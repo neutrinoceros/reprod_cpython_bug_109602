@@ -2396,7 +2396,6 @@ class Dataset(abc.ABC):
 
         self._parse_parameter_file()
         self.set_units()
-        self.setup_cosmology()
         self._assign_unit_system(unit_system)
         self._setup_coordinate_handler(axis_order)
         self._set_derived_attrs()
@@ -2409,18 +2408,7 @@ class Dataset(abc.ABC):
                 "Something went wrong during yt's initialization: "
                 "dataset cache isn't properly initialized"
             )
-        try:
-            _ds_store.check_ds(self)
-        except NoParameterShelf:
-            pass
         self._setup_classes()
-
-    @property
-    def filename(self):
-        if self._input_filename.startswith("http"):
-            return self._input_filename
-        else:
-            return os.path.abspath(os.path.expanduser(self._input_filename))
 
     @property
     def basename(self):
@@ -2434,27 +2422,9 @@ class Dataset(abc.ABC):
     def periodicity(self):
         return self._periodicity
 
-    @abc.abstractmethod
-    def _parse_parameter_file(self):
-        # set up various attributes from self.parameter_filename
-        # for a full description of what is required here see
-        # yt.frontends._skeleton.SkeletonDataset
-        pass
-
-    @abc.abstractmethod
-    def _set_code_unit_attributes(self):
-        # set up code-units to physical units normalization factors
-        # for a full description of what is required here see
-        # yt.frontends._skeleton.SkeletonDataset
-        pass
-
     def _set_derived_attrs(self):
-        if self.domain_left_edge is None or self.domain_right_edge is None:
-            self.domain_center = np.zeros(3)
-            self.domain_width = np.zeros(3)
-        else:
-            self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
-            self.domain_width = self.domain_right_edge - self.domain_left_edge
+        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
+        self.domain_width = self.domain_right_edge - self.domain_left_edge
         if not isinstance(self.current_time, YTQuantity):
             self.current_time = self.quan(self.current_time, "code_time")
         for attr in ("center", "width", "left_edge", "right_edge"):
@@ -2470,19 +2440,8 @@ class Dataset(abc.ABC):
         s = f"{self.basename};{self.current_time};{self.unique_identifier}"
         return hashlib.md5(s.encode("utf-8")).hexdigest()
 
-    def __getitem__(self, key):
-        """Returns units, parameters, or conversion_factors in that order."""
-        return self.parameters[key]
 
-    def __iter__(self):
-        yield from self.parameters
 
-    def has_key(self, key):
-        """
-        Checks units, parameters, and conversion factors. Returns a boolean.
-
-        """
-        return key in self.parameters
 
     _instantiated_index = None
 
@@ -2521,30 +2480,6 @@ class Dataset(abc.ABC):
         # deprecated fields will be logged if they are used
         self.fields_detected = True
 
-    def set_field_label_format(self, format_property, value):
-        """
-        Set format properties for how fields will be written
-        out. Accepts
-
-        format_property : string indicating what property to set
-        value: the value to set for that format_property
-        """
-        available_formats = {"ionization_label": ("plus_minus", "roman_numeral")}
-        if format_property in available_formats:
-            if value in available_formats[format_property]:
-                setattr(self, f"_{format_property}_format", value)
-            else:
-                raise ValueError(
-                    "{} not an acceptable value for format_property "
-                    "{}. Choices are {}.".format(
-                        value, format_property, available_formats[format_property]
-                    )
-                )
-        else:
-            raise ValueError(
-                f"{format_property} not a recognized format_property. Available "
-                f"properties are: {list(available_formats.keys())}"
-            )
 
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
@@ -2555,12 +2490,6 @@ class Dataset(abc.ABC):
         /,
     ) -> DerivedField:
         field_info, candidates = self._get_field_info_helper(field)
-
-        if field_info.name[1] in ("px", "py", "pz", "pdx", "pdy", "pdz"):
-            # escape early as a bandaid solution to
-            # https://github.com/yt-project/yt/issues/3381
-            return field_info
-
         return field_info
 
     def _get_field_info_helper(
@@ -2572,14 +2501,10 @@ class Dataset(abc.ABC):
 
         ftype: str
         fname: str
-        if isinstance(field, str):
-            ftype, fname = "unknown", field
-        elif isinstance(field, tuple) and len(field) == 2:
+        if isinstance(field, tuple) and len(field) == 2:
             ftype, fname = field
-        elif isinstance(field, DerivedField):
-            ftype, fname = field.name
         else:
-            raise YTFieldNotParseable(field)
+            raise TypeError(field)
 
         if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname], []
@@ -2592,9 +2517,6 @@ class Dataset(abc.ABC):
         self.objects = []
         self.plots = []
         for name, cls in sorted(data_object_registry.items()):
-            if name in self._index_class._unsupported_objects:
-                setattr(self, name, _unsupported_object(self, name))
-                continue
             self._add_object_class(name, cls)
         self.object_types.sort()
 
@@ -2610,158 +2532,17 @@ class Dataset(abc.ABC):
         obj.__doc__ = base.__doc__
         setattr(self, name, obj)
 
-    def _find_extremum(self, field, ext, source=None, to_array=True):
-        """
-        Find the extremum value of a field in a data object (source) and its position.
-
-        Parameters
-        ----------
-        field : str or tuple(str, str)
-        ext : str
-            'min' or 'max', select an extremum
-        source : a Yt data object
-        to_array : bool
-            select the return type.
-
-        Returns
-        -------
-        val, coords
-
-        val: unyt.unyt_quantity
-            extremum value detected
-
-        coords: unyt.unyt_array or list(unyt.unyt_quantity)
-            Conversion to a single unyt_array object is only possible for coordinate
-            systems with homogeneous dimensions across axes (i.e. cartesian).
-        """
-        ext = ext.lower()
-        if source is None:
-            source = self.all_data()
-        method = {
-            "min": source.quantities.min_location,
-            "max": source.quantities.max_location,
-        }[ext]
-        val, x1, x2, x3 = method(field)
-        coords = [x1, x2, x3]
-        if to_array:
-            # force conversion to length
-            alt_coords = []
-            for x in coords:
-                alt_coords.append(
-                    self.quan(x.v, "code_length")
-                    if x.units.is_dimensionless
-                    else x.to("code_length")
-                )
-            coords = self.arr(alt_coords, dtype="float64").to("code_length")
-        return val, coords
-
-    def find_max(self, field, source=None, to_array=True):
-        """
-        Returns (value, location) of the maximum of a given field.
-
-        This is a wrapper around _find_extremum
-        """
-        return self._find_extremum(field, "max", source=source, to_array=to_array)
-
-    def find_min(self, field, source=None, to_array=True):
-        """
-        Returns (value, location) for the minimum of a given field.
-
-        This is a wrapper around _find_extremum
-        """
-        return self._find_extremum(field, "min", source=source, to_array=to_array)
-
-    def find_field_values_at_point(self, fields, coords):
-        """
-        Returns the values [field1, field2,...] of the fields at the given
-        coordinates. Returns a list of field values in the same order as
-        the input *fields*.
-        """
-        point = self.point(coords)
-        ret = [point[f] for f in iter_fields(fields)]
-        if len(ret) == 1:
-            return ret[0]
-        else:
-            return ret
-
-    def find_field_values_at_points(self, fields, coords):
-        """
-        Returns the values [field1, field2,...] of the fields at the given
-        [(x1, y1, z2), (x2, y2, z2),...] points.  Returns a list of field
-        values in the same order as the input *fields*.
-
-        """
-        # If an optimized version exists on the Index object we'll use that
-        try:
-            return self.index._find_field_values_at_points(fields, coords)
-        except AttributeError:
-            pass
-
-        fields = list(iter_fields(fields))
-        out = []
-
-        # This may be slow because it creates a data object for each point
-        for field_index, field in enumerate(fields):
-            funit = self._get_field_info(field).units
-            out.append(self.arr(np.empty((len(coords),)), funit))
-            for coord_index, coord in enumerate(coords):
-                out[field_index][coord_index] = self.point(coord)[field]
-        if len(fields) == 1:
-            return out[0]
-        else:
-            return out
 
     # Now all the object related stuff
-    def all_data(self, find_max=False, **kwargs):
+    def all_data(self, **kwargs):
         """
         all_data is a wrapper to the Region object for creating a region
         which covers the entire simulation domain.
         """
         self.index
-        if find_max:
-            c = self.find_max("density")[1]
-        else:
-            c = (self.domain_right_edge + self.domain_left_edge) / 2.0
+        c = (self.domain_right_edge + self.domain_left_edge) / 2.0
         return self.region(c, self.domain_left_edge, self.domain_right_edge, **kwargs)
 
-    def box(self, left_edge, right_edge, **kwargs):
-        """
-        box is a wrapper to the Region object for creating a region
-        without having to specify a *center* value.  It assumes the center
-        is the midpoint between the left_edge and right_edge.
-
-        Keyword arguments are passed to the initializer of the YTRegion object
-        (e.g. ds.region).
-        """
-        # we handle units in the region data object
-        # but need to check if left_edge or right_edge is a
-        # list or other non-array iterable before calculating
-        # the center
-        if isinstance(left_edge[0], YTQuantity):
-            left_edge = YTArray(left_edge)
-            right_edge = YTArray(right_edge)
-
-        left_edge = np.asanyarray(left_edge, dtype="float64")
-        right_edge = np.asanyarray(right_edge, dtype="float64")
-        c = (left_edge + right_edge) / 2.0
-        return self.region(c, left_edge, right_edge, **kwargs)
-
-    def _setup_particle_type(self, ptype):
-        orig = set(self.field_info.items())
-        self.field_info.setup_particle_fields(ptype)
-        return [n for n, v in set(self.field_info.items()).difference(orig)]
-
-    @property
-    def ires_factor(self):
-        o2 = np.log2(self.refine_by)
-        if o2 != int(o2):
-            raise RuntimeError
-        # In the case that refine_by is 1 or 0 or something, we just
-        # want to make it a non-operative number, so we set to 1.
-        return max(1, int(o2))
-
-    def relative_refinement(self, l0, l1):
-        return self.refine_by ** (l1 - l0)
 
     def _assign_unit_system(
         self,
@@ -2782,11 +2563,8 @@ class Dataset(abc.ABC):
         # dimensions as amperes.
         mks_system = False
         mag_unit: Optional[unyt_quantity] = getattr(self, "magnetic_unit", None)
-        mag_dims: Optional[set[Symbol]]
-        if mag_unit is not None:
-            mag_dims = mag_unit.units.dimensions.free_symbols
-        else:
-            mag_dims = None
+        mag_dims = mag_unit.units.dimensions.free_symbols
+
         if unit_system != "code":
             # if the unit system is known, we can check if it
             # has a "current_mks" unit
@@ -2797,29 +2575,7 @@ class Dataset(abc.ABC):
             # then we check if the magnetic field unit has a SI
             # current dimension in it
             mks_system = True
-        # Now we get to the tricky part. If we have an MKS-like system but
-        # we asked for a conversion to something CGS-like, or vice-versa,
-        # we have to convert the magnetic field
-        if mag_dims is not None:
-            self.magnetic_unit: unyt_quantity
-            if mks_system and current_mks not in mag_dims:
-                self.magnetic_unit = self.quan(
-                    self.magnetic_unit.to_value("gauss") * 1.0e-4, "T"
-                )
-                # The following modification ensures that we get the conversion to
-                # mks correct
-                self.unit_registry.modify(
-                    "code_magnetic", self.magnetic_unit.value * 1.0e3 * 0.1**-0.5
-                )
-            elif not mks_system and current_mks in mag_dims:
-                self.magnetic_unit = self.quan(
-                    self.magnetic_unit.to_value("T") * 1.0e4, "gauss"
-                )
-                # The following modification ensures that we get the conversion to
-                # cgs correct
-                self.unit_registry.modify(
-                    "code_magnetic", self.magnetic_unit.value * 1.0e-4
-                )
+
         current_mks_unit = "A" if mks_system else None
         us = create_code_unit_system(
             self.unit_registry, current_mks_unit=current_mks_unit
@@ -2832,13 +2588,6 @@ class Dataset(abc.ABC):
         self.unit_system: UnitSystem = us
         self.unit_registry.unit_system = self.unit_system
 
-    @property
-    def _uses_code_length_unit(self) -> bool:
-        return self._unit_system_name == "code" or self.no_cgs_equiv_length
-
-    @property
-    def _uses_code_time_unit(self) -> bool:
-        return self._unit_system_name == "code"
 
     def _create_unit_registry(self, unit_system):
         from yt.units import dimensions
@@ -2881,73 +2630,9 @@ class Dataset(abc.ABC):
         Creates the unit registry for this dataset.
 
         """
-
-        if getattr(self, "cosmological_simulation", False):
-            # this dataset is cosmological, so add cosmological units.
-            self.unit_registry.modify("h", self.hubble_constant)
-            if getattr(self, "current_redshift", None) is not None:
-                # Comoving lengths
-                for my_unit in ["m", "pc", "AU", "au"]:
-                    new_unit = f"{my_unit}cm"
-                    my_u = Unit(my_unit, registry=self.unit_registry)
-                    self.unit_registry.add(
-                        new_unit,
-                        my_u.base_value / (1 + self.current_redshift),
-                        dimensions.length,
-                        "\\rm{%s}/(1+z)" % my_unit,
-                        prefixable=True,
-                    )
-                self.unit_registry.modify("a", 1 / (1 + self.current_redshift))
-
         self.set_code_units()
 
-    def setup_cosmology(self):
-        """
-        If this dataset is cosmological, add a cosmology object.
-        """
-        if not getattr(self, "cosmological_simulation", False):
-            return
 
-        # Set dynamical dark energy parameters
-        use_dark_factor = getattr(self, "use_dark_factor", False)
-        w_0 = getattr(self, "w_0", -1.0)
-        w_a = getattr(self, "w_a", 0.0)
-
-        # many frontends do not set this
-        setdefaultattr(self, "omega_radiation", 0.0)
-
-        self.cosmology = Cosmology(
-            hubble_constant=self.hubble_constant,
-            omega_matter=self.omega_matter,
-            omega_lambda=self.omega_lambda,
-            omega_radiation=self.omega_radiation,
-            use_dark_factor=use_dark_factor,
-            w_0=w_0,
-            w_a=w_a,
-        )
-
-        if not hasattr(self, "current_time"):
-            self.current_time = self.cosmology.t_from_z(self.current_redshift)
-
-        if getattr(self, "current_redshift", None) is not None:
-            self.critical_density = self.cosmology.critical_density(
-                self.current_redshift
-            )
-            self.scale_factor = 1.0 / (1.0 + self.current_redshift)
-
-    def get_unit_from_registry(self, unit_str):
-        """
-        Creates a unit object matching the string expression, using this
-        dataset's unit registry.
-
-        Parameters
-        ----------
-        unit_str : str
-            string that we can parse for a sympy Expr.
-
-        """
-        new_unit = Unit(unit_str, registry=self.unit_registry)
-        return new_unit
 
     def set_code_units(self):
         # set attributes like ds.length_unit
@@ -2975,20 +2660,12 @@ class Dataset(abc.ABC):
         # Defining code units for magnetic fields are tricky because
         # they have different dimensions in different unit systems, so we have
         # to handle them carefully
-        if hasattr(self, "magnetic_unit"):
-            if self.magnetic_unit.units.dimensions == dimensions.magnetic_field_cgs:
-                # We have to cast this explicitly to MKS base units, otherwise
-                # unyt will convert it automatically to Tesla
-                value = self.magnetic_unit.to_value("sqrt(kg)/(sqrt(m)*s)")
-                dims = dimensions.magnetic_field_cgs
-            else:
-                value = self.magnetic_unit.to_value("T")
-                dims = dimensions.magnetic_field_mks
-        else:
-            # Fallback to gauss if no magnetic unit is specified
-            # 1 gauss = 1 sqrt(g)/(sqrt(cm)*s) = 0.1**0.5 sqrt(kg)/(sqrt(m)*s)
-            value = 0.1**0.5
-            dims = dimensions.magnetic_field_cgs
+        # We have to cast this explicitly to MKS base units, otherwise
+        # unyt will convert it automatically to Tesla
+        value = self.magnetic_unit.to_value("sqrt(kg)/(sqrt(m)*s)")
+        dims = dimensions.magnetic_field_cgs
+
+
         self.unit_registry.add("code_magnetic", value, dims)
         # domain_width does not yet exist
         if self.domain_left_edge is not None and self.domain_right_edge is not None:
@@ -3105,106 +2782,6 @@ class Dataset(abc.ABC):
         self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
         return self._quan
 
-    def add_field(
-        self, name, function, sampling_type, *, force_override=False, **kwargs
-    ):
-        """
-        Dataset-specific call to add_field
-
-        Add a new field, along with supplemental metadata, to the list of
-        available fields.  This respects a number of arguments, all of which
-        are passed on to the constructor for
-        :class:`~yt.data_objects.api.DerivedField`.
-
-        Parameters
-        ----------
-
-        name : str
-           is the name of the field.
-        function : callable
-           A function handle that defines the field.  Should accept
-           arguments (field, data)
-        sampling_type: str
-           "cell" or "particle" or "local"
-        force_override: bool
-           If False (default), an error will be raised if a field of the same name already exists.
-        units : str
-           A plain text string encoding the unit.  Powers must be in
-           python syntax (** instead of ^).
-        take_log : bool
-           Describes whether the field should be logged
-        validators : list
-           A list of :class:`FieldValidator` objects
-        vector_field : bool
-           Describes the dimensionality of the field.  Currently unused.
-        display_name : str
-           A name used in the plots
-        force_override : bool
-           Whether to override an existing derived field. Does not work with
-           on-disk fields.
-
-        """
-        validate_field_function(function)
-        self.index
-        if force_override and name in self.index.field_list:
-            raise RuntimeError(
-                "force_override is only meant to be used with "
-                "derived fields, not on-disk fields."
-            )
-
-        self.field_info.add_field(
-            name, function, sampling_type, force_override=force_override, **kwargs
-        )
-        self.field_info._show_field_errors.append(name)
-        deps, _ = self.field_info.check_derived_fields([name])
-        self.field_dependencies.update(deps)
-
-
-    def define_unit(self, symbol, value, tex_repr=None, offset=None, prefixable=False):
-        """
-        Define a new unit and add it to the dataset's unit registry.
-
-        Parameters
-        ----------
-        symbol : string
-            The symbol for the new unit.
-        value : tuple or ~yt.units.yt_array.YTQuantity
-            The definition of the new unit in terms of some other units. For example,
-            one would define a new "mph" unit with (1.0, "mile/hr")
-        tex_repr : string, optional
-            The LaTeX representation of the new unit. If one is not supplied, it will
-            be generated automatically based on the symbol string.
-        offset : float, optional
-            The default offset for the unit. If not set, an offset of 0 is assumed.
-        prefixable : bool, optional
-            Whether or not the new unit can use SI prefixes. Default: False
-
-        Examples
-        --------
-        >>> ds.define_unit("mph", (1.0, "mile/hr"))
-        >>> two_weeks = YTQuantity(14.0, "days")
-        >>> ds.define_unit("fortnight", two_weeks)
-        """
-        define_unit(
-            symbol,
-            value,
-            tex_repr=tex_repr,
-            offset=offset,
-            prefixable=prefixable,
-            registry=self.unit_registry,
-        )
-
-    def _is_within_domain(self, point) -> bool:
-        assert len(point) == len(self.domain_left_edge)
-        assert point.units.dimensions == un.dimensions.length
-        for i, x in enumerate(point):
-            if self.periodicity[i]:
-                continue
-            if x < self.domain_left_edge[i]:
-                return False
-            if x > self.domain_right_edge[i]:
-                return False
-        return True
 
 
 class FieldInfoContainer(UserDict):
@@ -3235,88 +2812,12 @@ class FieldInfoContainer(UserDict):
 
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
-        if self.ds is None:
-            return
         index_fields = {f for _, f in self if _ == "index"}
         for ftype in self.ds.fluid_types:
             if ftype in ("index", "deposit"):
                 continue
             for f in index_fields:
-                if (ftype, f) in self:
-                    continue
                 self.alias((ftype, f), ("index", f))
-
-    def setup_particle_fields(self, ptype, ftype="gas", num_neighbors=64):
-        skip_output_units = ("code_length",)
-        for f, (units, aliases, dn) in sorted(self.known_particle_fields):
-            units = self.ds.field_units.get((ptype, f), units)
-            output_units = units
-            if (
-                f in aliases or ptype not in self.ds.particle_types_raw
-            ) and units not in skip_output_units:
-                u = Unit(units, registry=self.ds.unit_registry)
-                if u.dimensions is not dimensionless:
-                    output_units = str(self.ds.unit_system[u.dimensions])
-            if (ptype, f) not in self.field_list:
-                continue
-            self.add_output_field(
-                (ptype, f),
-                sampling_type="particle",
-                units=units,
-                display_name=dn,
-                output_units=output_units,
-            )
-            for alias in aliases:
-                self.alias((ptype, alias), (ptype, f), units=output_units)
-
-        # We'll either have particle_position or particle_position_[xyz]
-        if (ptype, "particle_position") in self.field_list or (
-            ptype,
-            "particle_position",
-        ) in self.field_aliases:
-            particle_scalar_functions(
-                ptype, "particle_position", "particle_velocity", self
-            )
-        else:
-            # We need to check to make sure that there's a "known field" that
-            # overlaps with one of the vector fields.  For instance, if we are
-            # in the Stream frontend, and we have a set of scalar position
-            # fields, they will overlap with -- and be overridden by -- the
-            # "known" vector field that the frontend creates.  So the easiest
-            # thing to do is to simply remove the on-disk field (which doesn't
-            # exist) and replace it with a derived field.
-            if (ptype, "particle_position") in self and self[
-                ptype, "particle_position"
-            ]._function == NullFunc:
-                self.pop((ptype, "particle_position"))
-            particle_vector_functions(
-                ptype,
-                [f"particle_position_{ax}" for ax in "xyz"],
-                [f"particle_velocity_{ax}" for ax in "xyz"],
-                self,
-            )
-        particle_deposition_functions(ptype, "particle_position", "particle_mass", self)
-        standard_particle_fields(self, ptype)
-        # Now we check for any leftover particle fields
-        for field in sorted(self.field_list):
-            if field in self:
-                continue
-            if not isinstance(field, tuple):
-                raise RuntimeError
-            if field[0] not in self.ds.particle_types:
-                continue
-            units = self.ds.field_units.get(field, None)
-            if units is None:
-                try:
-                    units = ytcfg.get("fields", *field, "units")
-                except KeyError:
-                    units = ""
-            self.add_output_field(
-                field,
-                sampling_type="particle",
-                units=units,
-            )
-        self.setup_smoothed_fields(ptype, num_neighbors=num_neighbors, ftype=ftype)
 
     def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
         known_other_fields = dict(self.known_other_fields)
