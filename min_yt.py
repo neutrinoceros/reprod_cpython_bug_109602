@@ -154,7 +154,7 @@ class YTDataContainer(abc.ABC):
 
 
 
-class YTSelectionContainer(YTDataContainer, abc.ABC):
+class YTRegion(YTDataContainer):
     _locked = False
     _sort_by = None
     _selector = None
@@ -165,10 +165,33 @@ class YTSelectionContainer(YTDataContainer, abc.ABC):
     _min_level = None
     _derived_quantity_chunking = "io"
 
-    def __init__(self, ds, field_parameters, data_source=None):
+    _key_fields = ["x", "y", "z", "dx", "dy", "dz"]
+    _spatial = False
+    _num_ghost_zones = 0
+    _dimensionality = 3
+
+    _type_name = "region"
+    _con_args = ("center", "left_edge", "right_edge")
+
+    def __init__(
+        self,
+        center,
+        left_edge,
+        right_edge,
+        fields=None,
+        ds=None,
+        field_parameters=None,
+        data_source=None,
+    ):
         super().__init__(ds, field_parameters)
         self._data_source = data_source
         self.quantities = DerivedQuantityCollection(self)
+
+        self._set_center(center)
+        self.coords = None
+        self._grids = None
+        self.left_edge = self.ds.arr(left_edge.copy(), dtype="float64")
+        self.right_edge = self.ds.arr(right_edge.copy(), dtype="float64")
 
     @property
     def selector(self):
@@ -253,62 +276,6 @@ class YTSelectionContainer(YTDataContainer, abc.ABC):
     @property
     def min_level(self):
         return self.ds.min_level
-
-
-class YTSelectionContainer3D(YTSelectionContainer):
-    """
-    Returns an instance of YTSelectionContainer3D, or prepares one.  Usually only
-    used as a base class.  Note that *center* is supplied, but only used
-    for fields and quantities that require it.
-    """
-
-    _key_fields = ["x", "y", "z", "dx", "dy", "dz"]
-    _spatial = False
-    _num_ghost_zones = 0
-    _dimensionality = 3
-
-    def __init__(self, center, ds, field_parameters=None, data_source=None):
-        super().__init__(ds, field_parameters, data_source)
-        self._set_center(center)
-        self.coords = None
-        self._grids = None
-
-
-class YTRegion(YTSelectionContainer3D):
-    """A 3D region of data with an arbitrary center.
-
-    Takes an array of three *left_edge* coordinates, three
-    *right_edge* coordinates, and a *center* that can be anywhere
-    in the domain. If the selected region extends past the edges
-    of the domain, no data will be found there, though the
-    object's `left_edge` or `right_edge` are not modified.
-
-    Parameters
-    ----------
-    center : array_like
-        The center of the region
-    left_edge : array_like
-        The left edge of the region
-    right_edge : array_like
-        The right edge of the region
-    """
-
-    _type_name = "region"
-    _con_args = ("center", "left_edge", "right_edge")
-
-    def __init__(
-        self,
-        center,
-        left_edge,
-        right_edge,
-        fields=None,
-        ds=None,
-        field_parameters=None,
-        data_source=None,
-    ):
-        YTSelectionContainer3D.__init__(self, center, ds, field_parameters, data_source)
-        self.left_edge = self.ds.arr(left_edge.copy(), dtype="float64")
-        self.right_edge = self.ds.arr(right_edge.copy(), dtype="float64")
 
 
 def requires_index(attr_name):
