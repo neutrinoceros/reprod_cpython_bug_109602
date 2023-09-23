@@ -205,11 +205,11 @@ class StreamHandler:
 
 
 class FieldInfoContainer(UserDict):
-    known_other_fields: KnownFieldsT = ()
-    known_particle_fields: KnownFieldsT = ()
-    extra_union_fields: tuple[FieldKey, ...] = ()
+    known_other_fields = ()
+    known_particle_fields = ()
+    extra_union_fields = ()
 
-    def __init__(self, ds, field_list: list[FieldKey], slice_info=None):
+    def __init__(self, ds, field_list, slice_info=None):
         super().__init__()
         self.ds = ds
         self.field_list = field_list
@@ -227,7 +227,7 @@ class FieldInfoContainer(UserDict):
 
     def add_field(
         self,
-        name: FieldKey,
+        name,
         function: Callable,
         sampling_type: str,
         *,
@@ -252,11 +252,7 @@ class FieldInfoContainer(UserDict):
         self.ds.derived_field_list = sorted(dfl)
         return loaded, unavailable
 
-    def alias(
-        self,
-        alias_name: FieldKey,
-        original_name: FieldKey,
-    ):
+    def alias(self, alias_name, original_name):
         # We default to CGS here, but in principle, this can be pluggable
         # as well.
 
@@ -376,9 +372,7 @@ class StreamHierarchy(GridIndex):
 
 
 class StreamFieldInfo(FieldInfoContainer):
-    known_other_fields: KnownFieldsT = (
-        ("density", ("code_mass/code_length**3", ["density"], None)),
-    )
+    known_other_fields = (("density", ("code_mass/code_length**3", ["density"], None)),)
 
     def setup_fluid_fields(self):
         species_names = []
