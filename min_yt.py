@@ -152,7 +152,6 @@ class YTDataContainer(abc.ABC):
                     "or parameter to the constructor"
                 )
 
-        self._current_particle_type = "all"
         self._current_fluid_type = self.ds.default_fluid_type
         self.ds.objects.append(weakref.proxy(self))
         self.field_data = YTFieldData()
@@ -178,9 +177,6 @@ class YTDataContainer(abc.ABC):
             name = getattr(cls, "_override_selector_name", cls._type_name)
             data_object_registry[name] = cls
 
-    @property
-    def pf(self):
-        return getattr(self, "ds", None)
 
     @property
     def index(self):
@@ -188,16 +184,6 @@ class YTDataContainer(abc.ABC):
             return self._index
         self._index = self.ds.index
         return self._index
-
-    def _debug(self):
-        """
-        When called from within a derived field, this will run pdb.  However,
-        during field detection, it will not.  This allows you to more easily
-        debug fields that are being called on actual objects.
-        """
-        import pdb
-
-        pdb.set_trace()
 
     def _set_default_field_parameters(self):
         self.field_parameters = {}
