@@ -39,9 +39,6 @@ class CartesianCoordinateHandler:
             )
 
 
-
-
-
 class FieldDetector(defaultdict):
     def __init__(self, nd=16, ds=None):
         self.nd = nd
