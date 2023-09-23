@@ -441,7 +441,20 @@ class Dataset:
         # 1 K = 1 K
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
 
-        self._parse_parameter_file()
+        self.domain_left_edge = self.stream_handler.domain_left_edge.copy()
+        self.domain_right_edge = self.stream_handler.domain_right_edge.copy()
+        self.refine_by = self.stream_handler.refine_by
+        self.dimensionality = self.stream_handler.dimensionality
+        self._periodicity = (True, True, True)
+        self.domain_dimensions = self.stream_handler.domain_dimensions
+        self.current_time = self.stream_handler.simulation_time
+        self.gamma = 5.0 / 3.0
+        self.current_redshift = 0.0
+        self.omega_lambda = 0.0
+        self.omega_matter = 0.0
+        self.hubble_constant = 0.0
+        self.cosmological_simulation = 0
+
         self.unit_system = unit_system_registry["cgs"]
         self.unit_registry.unit_system = self.unit_system
 
@@ -484,22 +497,6 @@ class Dataset:
     def quan(self):
         self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
         return self._quan
-
-    def _parse_parameter_file(self):
-        self.domain_left_edge = self.stream_handler.domain_left_edge.copy()
-        self.domain_right_edge = self.stream_handler.domain_right_edge.copy()
-        self.refine_by = self.stream_handler.refine_by
-        self.dimensionality = self.stream_handler.dimensionality
-        self._periodicity = (True, True, True)
-        self.domain_dimensions = self.stream_handler.domain_dimensions
-        self.current_time = self.stream_handler.simulation_time
-        self.gamma = 5.0 / 3.0
-        self.current_redshift = 0.0
-        self.omega_lambda = 0.0
-        self.omega_matter = 0.0
-        self.hubble_constant = 0.0
-        self.cosmological_simulation = 0
-
 
 def load_uniform_grid(
     *,
