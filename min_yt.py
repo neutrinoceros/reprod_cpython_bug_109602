@@ -24,22 +24,6 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
-fp_units = {
-    "bulk_velocity": "cm/s",
-    "center": "cm",
-    "normal": "",
-    "cp_x_vec": "",
-    "cp_y_vec": "",
-    "cp_z_vec": "",
-    "x_hat": "",
-    "y_hat": "",
-    "z_hat": "",
-    "omega_baryon": "",
-    "virial_radius": "cm",
-    "observer_redshift": "",
-    "source_redshift": "",
-}
-
 
 class FieldDetector(defaultdict):
     Level = 1
