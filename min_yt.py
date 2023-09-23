@@ -298,17 +298,12 @@ class Dataset(abc.ABC):
         return self._instantiated_index
 
     def _get_field_info(self, field, /):
-        field_info, candidates = self._get_field_info_helper(field)
-        return field_info
-
-    def _get_field_info_helper(self, field, /):
-        self.index
         ftype, fname = field
-
         if (ftype, fname) in self.field_info:
-            return self.field_info[ftype, fname], []
+            return self.field_info[ftype, fname]
+        else:
+            raise YTFieldNotFound(field, ds=self)
 
-        raise YTFieldNotFound(field, ds=self)
 
     def _assign_unit_system(self, unit_system) -> None:
         # we need to determine if the requested unit system
