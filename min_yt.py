@@ -16,14 +16,13 @@ from unyt.exceptions import UnitConversionError
 from yt.arraytypes import blankRecordArray
 from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
-from yt.fields.derived_field import NullFunc, TranslationFunc
+from yt.fields.derived_field import TranslationFunc
 from yt.fields.field_detector import FieldDetector
 from yt.fields.field_exceptions import NeedsConfiguration
-from yt.fields.field_plugin_registry import FunctionName
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import YTQuantity, dimensions
-from yt.units.dimensions import current_mks, dimensionless
+from yt.units.dimensions import current_mks
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray
@@ -687,6 +686,7 @@ class StreamFieldInfo(FieldInfoContainer):
             self.ds.stream_handler.field_units[field]
 
         self.species_names = sorted(species_names)
+
 
 class MinimalStreamDataset(Dataset):
     _dataset_type = "stream"
