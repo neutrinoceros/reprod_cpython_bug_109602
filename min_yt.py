@@ -16,9 +16,7 @@ from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 class YTFieldNotFound(Exception):
-    def __init__(self, field, ds):
-        self.field = field
-        self.ds = ds
+    pass
 
 class CartesianCoordinateHandler:
     def __init__(self, ds):
@@ -403,7 +401,7 @@ class Dataset:
         if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname]
         else:
-            raise YTFieldNotFound(field, ds=self)
+            raise YTFieldNotFound
 
 
 def load_uniform_grid(
