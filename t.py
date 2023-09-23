@@ -1,6 +1,6 @@
 import numpy as np
 
-from min_yt import load_uniform_grid
+from min_yt import load_uniform_grid, YTRegion
 
 
 def foo():
@@ -12,7 +12,7 @@ def foo():
     # inlined ds.all_data
     ds.index
     c = (ds.domain_right_edge + ds.domain_left_edge) / 2.0
-    data_source = ds.region(c, ds.domain_left_edge, ds.domain_right_edge)
+    data_source = YTRegion(c, ds.domain_left_edge, ds.domain_right_edge, ds=ds)
     data_source["gas", "density"].min()
 
 
