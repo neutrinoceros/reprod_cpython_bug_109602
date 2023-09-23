@@ -58,7 +58,6 @@ from yt.funcs import (
     get_output_filename,
     iter_fields,
     obj_length,
-    parse_center_array,
 )
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import (
@@ -232,8 +231,7 @@ class YTDataContainer(abc.ABC):
             self.center = None
             return
         else:
-            axis = getattr(self, "axis", None)
-            self.center = parse_center_array(center, ds=self.ds, axis=axis)
+            self.center = center
             self.set_field_parameter("center", self.center)
 
     def get_field_parameter(self, name, default=None):
