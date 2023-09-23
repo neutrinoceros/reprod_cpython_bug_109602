@@ -24,7 +24,6 @@ from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
 from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
-from yt.data_objects.static_output import _cached_datasets, _ds_store
 from yt.fields.derived_field import (
     DerivedField,
     NullFunc,
@@ -523,15 +522,6 @@ class Dataset(abc.ABC):
         self._assign_unit_system(unit_system)
         self._setup_coordinate_handler(axis_order)
         self._set_derived_attrs()
-        # Because we need an instantiated class to check the ds's existence in
-        # the cache, we move that check to here from __new__.  This avoids
-        # double-instantiation.
-        # PR 3124: _set_derived_attrs() can change the hash, check store here
-        if _ds_store is None:
-            raise RuntimeError(
-                "Something went wrong during yt's initialization: "
-                "dataset cache isn't properly initialized"
-            )
         self._setup_classes()
 
     @property
@@ -1219,7 +1209,6 @@ class MinimalStreamDataset(Dataset):
         self.stream_handler = stream_handler
         name = f"InMemoryParameterFile_{uuid.uuid4().hex}"
 
-        _cached_datasets[name] = self
         Dataset.__init__(
             self,
             name,
