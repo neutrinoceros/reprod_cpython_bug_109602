@@ -686,8 +686,6 @@ class StreamFieldInfo(FieldInfoContainer):
 
 
 class MinimalStreamDataset(Dataset):
-    _index_class = StreamHierarchy
-    _field_info_class = StreamFieldInfo
     _dataset_type = "stream"
 
     def __init__(self, *, stream_handler):
