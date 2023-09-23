@@ -405,9 +405,7 @@ class FieldInfoContainer(UserDict):
         # Now we start setting things up.
         self.field_list = field_list
         self.slice_info = slice_info
-        self.field_aliases: dict[FieldKey, FieldKey] = {}
-        self.species_names: list[FieldName] = []
-        self.setup_fluid_aliases()
+        self.field_aliases = {}
 
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
@@ -417,22 +415,6 @@ class FieldInfoContainer(UserDict):
                 continue
             for f in index_fields:
                 self.alias((ftype, f), ("index", f))
-
-    def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
-        known_other_fields = dict(self.known_other_fields)
-
-        for field in sorted(self.field_list):
-            units, aliases, display_name = known_other_fields.get(field[1], None)
-
-            # We allow field_units to override this.  First we check if the
-            # field *name* is in there, then the field *tuple*.
-            units = self.ds.field_units.get(field[1], units)
-            units = self.ds.field_units.get(field, units)
-            self.add_output_field(
-                field, sampling_type="cell", units=units, display_name=display_name
-            )
-            for alias in aliases:
-                self.alias((ftype, alias), field)
 
     def add_field(
         self,
