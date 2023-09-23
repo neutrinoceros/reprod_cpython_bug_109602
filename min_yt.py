@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import contextlib
-import functools
 import os
 import weakref
 from collections import UserDict, defaultdict
@@ -9,8 +7,6 @@ from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
-from yt.units import dimensions
-from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
@@ -24,7 +20,7 @@ class CartesianCoordinateHandler:
         self.ds = weakref.proxy(ds)
 
     def setup_fields(self, registry):
-        def _get_vert_fields(axi, units="code_length"):
+        def _get_vert_fields(axi, units="cm"):
             def _vert(field, data):
                 rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
                 return rv
@@ -38,7 +34,7 @@ class CartesianCoordinateHandler:
                 sampling_type="cell",
                 function=f3,
                 display_field=False,
-                units="code_length",
+                units="cm",
             )
 
 
@@ -84,7 +80,7 @@ class FieldDetector(defaultdict):
     @property
     def fcoords_vertex(self):
         fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
-        return self.ds.arr(fc, units="code_length")
+        return self.ds.arr(fc, units="cm")
 
 
 class DerivedField:
@@ -129,21 +125,9 @@ class DerivedField:
     def _get_needed_parameters(self, fd):
         return {}, {}
 
-    _unit_registry = None
-
-    @contextlib.contextmanager
-    def unit_registry(self, data):
-        old_registry = self._unit_registry
-        ur = data.ds.unit_registry
-        self._unit_registry = ur
-        yield
-        self._unit_registry = old_registry
-
     def __call__(self, data):
         """Return the value of the field in a given *data* object."""
-        with self.unit_registry(data):
-            dd = self._function(self, data)
-        return dd
+        return self._function(self, data)
 
 
 class StreamDictFieldHandler(UserDict):
@@ -305,10 +289,10 @@ class StreamHierarchy:
         self._count_grids()
         self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
         self.grid_left_edge = self.ds.arr(
-            np.zeros((self.num_grids, 3), self.float_type), "code_length"
+            np.zeros((self.num_grids, 3), self.float_type), "cm"
         )
         self.grid_right_edge = self.ds.arr(
-            np.ones((self.num_grids, 3), self.float_type), "code_length"
+            np.ones((self.num_grids, 3), self.float_type), "cm"
         )
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
@@ -332,7 +316,7 @@ class StreamHierarchy:
 
 
 class StreamFieldInfo(FieldInfoContainer):
-    known_other_fields = (("density", ("code_mass/code_length**3", ["density"], None)),)
+    known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
 
     def setup_fluid_fields(self):
         species_names = []
@@ -365,29 +349,19 @@ class Dataset:
         self.field_units = {}
         self._determined_fields = {}
 
-        self.unit_registry = UnitRegistry(unit_system="cgs")
-        self.unit_registry.add("code_length", 0.01, dimensions.length)
-        self.unit_registry.add("code_mass", 0.001, dimensions.mass)
-        self.unit_registry.add("code_density", 1000.0, dimensions.density)
-        self.unit_registry.add(
-            "code_specific_energy", 1.0e-4, dimensions.energy / dimensions.mass
-        )
-        self.unit_registry.add("code_time", 1.0, dimensions.time)
-        self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
-
         self.domain_left_edge = stream_handler.domain_left_edge.copy()
         self.domain_right_edge = stream_handler.domain_right_edge.copy()
         self.domain_dimensions = stream_handler.domain_dimensions
 
         self.coordinates = CartesianCoordinateHandler(self)
-        self.arr = functools.partial(YTArray, registry=self.unit_registry)
-        self.quan = functools.partial(YTQuantity, registry=self.unit_registry)
+        self.arr = YTArray
+        self.quan = YTQuantity
         for attr in ("left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
             # Note that we don't add on _ipython_display_ here because
             # everything is stored inside a MutableAttribute.
-            v = self.arr(v, "code_length")
+            v = self.arr(v, "cm")
             setattr(self, n, v)
 
     def _get_field_info(self, field, /):
@@ -434,13 +408,7 @@ def load_uniform_grid(
         processor_ids=np.zeros(1).reshape((1, 1)),
         fields=sfh,
         field_units=field_units,
-        code_units=(
-            "code_length",
-            "code_mass",
-            "code_time",
-            "code_velocity",
-            "code_magnetic",
-        ),
+        code_units=("cm", "g", "s", "cm/s", "T"),
     )
 
     handler.name = "UniformGridData"
