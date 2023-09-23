@@ -162,7 +162,6 @@ class DerivedField:
             self._shared_aliases_list = alias._shared_aliases_list
             self._shared_aliases_list.append(self)
 
-
     def check_available(self, data):
         return True
 
@@ -207,7 +206,6 @@ class DerivedField:
             if field_name not in original_fields:
                 del data[field_name]
         return dd
-
 
 
 class YTDataContainer(abc.ABC):
@@ -591,19 +589,11 @@ class Dataset(abc.ABC):
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 
-    def _get_field_info(
-        self,
-        field,
-        /
-    ):
+    def _get_field_info(self, field, /):
         field_info, candidates = self._get_field_info_helper(field)
         return field_info
 
-    def _get_field_info_helper(
-        self,
-        field,
-        /
-    ):
+    def _get_field_info_helper(self, field, /):
         self.index
 
         ftype: str
@@ -940,7 +930,7 @@ class FieldInfoContainer(UserDict):
         function: Callable,
         sampling_type: str,
         *,
-        alias= None,
+        alias=None,
         force_override: bool = False,
         **kwargs,
     ) -> None:
