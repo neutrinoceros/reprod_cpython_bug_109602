@@ -5,7 +5,6 @@ import functools
 import hashlib
 import itertools
 import os
-import re
 import time
 import uuid
 import weakref
@@ -18,18 +17,12 @@ from itertools import chain
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
-import unyt as un
 import yt.geometry.selection_routines
-from more_itertools import always_iterable
-from sympy import Symbol
-from typing_extensions import assert_never
 from unyt import Unit, UnitSystem, unyt_quantity
-from unyt.exceptions import UnitConversionError, UnitParseError
+from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
-from yt.config import ytcfg
 from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
-from yt.data_objects.profiles import create_profile
 from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.static_output import _cached_datasets, _ds_store
 from yt.data_objects.unions import ParticleUnion
@@ -37,71 +30,39 @@ from yt.fields.derived_field import (
     DerivedField,
     NullFunc,
     TranslationFunc,
-    ValidateSpatial,
 )
 from yt.fields.field_exceptions import NeedsConfiguration, NeedsGridType
-from yt.fields.field_functions import validate_field_function
 from yt.fields.field_plugin_registry import FunctionName, field_plugins
 from yt.fields.field_type_container import FieldTypeContainer
-from yt.fields.fluid_fields import setup_gradient_fields
-from yt.fields.particle_fields import (
-    add_union_field,
-    particle_deposition_functions,
-    particle_scalar_functions,
-    particle_vector_functions,
-    sph_whitelist_fields,
-    standard_particle_fields,
-)
 from yt.frontends.stream.api import StreamHierarchy
-from yt.frontends.ytdata.utilities import save_as_dataset
 from yt.funcs import (
-    get_output_filename,
     iter_fields,
     obj_length,
 )
 from yt.geometry.api import Geometry
-from yt.geometry.coordinates.api import (
-    CartesianCoordinateHandler
-)
+from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.geometry.selection_routines import compose_selector
 from yt.units import UnitContainer, _wrap_display_ytarray, dimensions
-from yt.units._numpy_wrapper_functions import uconcatenate
 from yt.units.dimensions import (
     current_mks,
     dimensionless,  # type: ignore
 )
-from yt.units.unit_object import define_unit
 from yt.units.unit_registry import UnitRegistry
 from yt.units.unit_systems import (
     create_code_unit_system,
     unit_system_registry,
 )
 from yt.units.yt_array import YTArray, YTQuantity
-from yt.utilities.amr_kdtree.api import AMRKDTree
-from yt.utilities.cosmology import Cosmology
 from yt.utilities.exceptions import (
     GenerationInProgress,
-    YTBooleanObjectError,
-    YTBooleanObjectsWrongDataset,
     YTCoordinateNotImplemented,
-    YTCouldNotGenerateField,
-    YTDataSelectorNotImplemented,
-    YTDimensionalityError,
     YTDomainOverflow,
-    YTException,
     YTFieldNotFound,
-    YTFieldNotParseable,
-    YTFieldUnitError,
-    YTFieldUnitParseError,
-    YTNonIndexedDataContainer,
-    YTSpatialFieldUnitError,
 )
 from yt.utilities.object_registries import data_object_registry
 from yt.utilities.parallel_tools.parallel_analysis_interface import (
     ParallelAnalysisInterface,
 )
-from yt.utilities.parameter_file_storage import NoParameterShelf
 
 
 class YTDataContainer(abc.ABC):
@@ -155,7 +116,6 @@ class YTDataContainer(abc.ABC):
             name = getattr(cls, "_override_selector_name", cls._type_name)
             data_object_registry[name] = cls
 
-
     @property
     def index(self):
         if self._index is not None:
@@ -168,7 +128,6 @@ class YTDataContainer(abc.ABC):
         for k, v in self._default_field_parameters.items():
             self.set_field_parameter(k, v)
 
-
     def _set_center(self, center):
         self.center = center
         self.set_field_parameter("center", self.center)
@@ -180,7 +139,6 @@ class YTDataContainer(abc.ABC):
         """
         self.field_parameters[name] = val
 
-
     def __getitem__(self, key):
         """
         Returns a single field.  Will add if necessary.
@@ -191,9 +149,7 @@ class YTDataContainer(abc.ABC):
 
         return self.field_data[f]
 
-
     _extrema_cache = None
-
 
     def _determine_fields(self, fields):
         if str(fields) in self.ds._determined_fields:
@@ -226,7 +182,6 @@ class YTDataContainer(abc.ABC):
     _tree = None
 
 
-
 class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     _locked = False
     _sort_by = None
@@ -252,7 +207,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
         sclass = getattr(s_module, f"{self._type_name}_selector", None)
         self._selector = sclass(self)
         return self._selector
-
 
     def _identify_dependencies(self, fields_to_get, spatial=False):
         inspected = 0
@@ -310,7 +264,7 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
         elif self._locked:
             raise GenerationInProgress(fields)
         # Track which ones we want in the end
-        ofields = set(list(self.field_data.keys()) + fields_to_get + fields_to_generate)
+        set(list(self.field_data.keys()) + fields_to_get + fields_to_generate)
         # At this point, we want to figure out *all* our dependencies.
         fields_to_get = self._identify_dependencies(fields_to_get, self._spatial)
         # We now split up into readers for the types of fields
@@ -331,23 +285,20 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
             self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
             self.field_data[f].convert_to_units(finfos[f].output_units)
 
-
     @contextmanager
     def _field_lock(self):
         self._locked = True
         yield
         self._locked = False
 
-
-
     @property
     def max_level(self):
         return self.ds.max_level
 
-
     @property
     def min_level(self):
         return 0
+
 
 class YTSelectionContainer3D(YTSelectionContainer):
     """
@@ -366,6 +317,7 @@ class YTSelectionContainer3D(YTSelectionContainer):
         self._set_center(center)
         self.coords = None
         self._grids = None
+
 
 class YTRegion(YTSelectionContainer3D):
     """A 3D region of data with an arbitrary center.
@@ -402,7 +354,6 @@ class YTRegion(YTSelectionContainer3D):
         YTSelectionContainer3D.__init__(self, center, ds, field_parameters, data_source)
         self.left_edge = self.ds.arr(left_edge.copy(), dtype="float64")
         self.right_edge = self.ds.arr(right_edge.copy(), dtype="float64")
-
 
 
 class MutableAttribute:
@@ -450,7 +401,6 @@ def requires_index(attr_name):
         self.__dict__[attr_name] = value
 
     return ireq
-
 
 
 class StreamDictFieldHandler(UserDict):
@@ -540,7 +490,7 @@ class Dataset(abc.ABC):
         dataset_type: Optional[str] = None,
         units_override: Optional[dict[str, str]] = None,
         # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
-        unit_system = "cgs",
+        unit_system="cgs",
         default_species_fields: Optional[
             "Any"
         ] = None,  # Any used as a placeholder here
@@ -617,9 +567,6 @@ class Dataset(abc.ABC):
         s = f"{self.basename};{self.current_time};{self.unique_identifier}"
         return hashlib.md5(s.encode("utf-8")).hexdigest()
 
-
-
-
     _instantiated_index = None
 
     @property
@@ -656,7 +603,6 @@ class Dataset(abc.ABC):
         # Now that we've detected the fields, set this flag so that
         # deprecated fields will be logged if they are used
         self.fields_detected = True
-
 
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
@@ -709,7 +655,6 @@ class Dataset(abc.ABC):
         obj.__doc__ = base.__doc__
         setattr(self, name, obj)
 
-
     # Now all the object related stuff
     def all_data(self, **kwargs):
         """
@@ -719,7 +664,6 @@ class Dataset(abc.ABC):
         self.index
         c = (self.domain_right_edge + self.domain_left_edge) / 2.0
         return self.region(c, self.domain_left_edge, self.domain_right_edge, **kwargs)
-
 
     def _assign_unit_system(
         self,
@@ -765,7 +709,6 @@ class Dataset(abc.ABC):
         self.unit_system: UnitSystem = us
         self.unit_registry.unit_system = self.unit_system
 
-
     def _create_unit_registry(self, unit_system):
         from yt.units import dimensions
 
@@ -809,8 +752,6 @@ class Dataset(abc.ABC):
         """
         self.set_code_units()
 
-
-
     def set_code_units(self):
         # set attributes like ds.length_unit
         self._set_code_unit_attributes()
@@ -841,7 +782,6 @@ class Dataset(abc.ABC):
         # unyt will convert it automatically to Tesla
         value = self.magnetic_unit.to_value("sqrt(kg)/(sqrt(m)*s)")
         dims = dimensions.magnetic_field_cgs
-
 
         self.unit_registry.add("code_magnetic", value, dims)
         # domain_width does not yet exist
@@ -960,7 +900,6 @@ class Dataset(abc.ABC):
         return self._quan
 
 
-
 class FieldInfoContainer(UserDict):
     """
     This is a generic field container.  It contains a list of potential derived
@@ -986,7 +925,6 @@ class FieldInfoContainer(UserDict):
         self.species_names: list[FieldName] = []
         self.setup_fluid_aliases()
 
-
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
         index_fields = {f for _, f in self if _ == "index"}
@@ -1000,7 +938,7 @@ class FieldInfoContainer(UserDict):
         known_other_fields = dict(self.known_other_fields)
 
         for field in sorted(self.field_list):
-            units, aliases, display_name  = known_other_fields.get(field[1], None)
+            units, aliases, display_name = known_other_fields.get(field[1], None)
 
             # We allow field_units to override this.  First we check if the
             # field *name* is in there, then the field *tuple*.
@@ -1011,7 +949,6 @@ class FieldInfoContainer(UserDict):
             )
             for alias in aliases:
                 self.alias((ftype, alias), field)
-
 
     def add_field(
         self,
@@ -1147,20 +1084,19 @@ class FieldInfoContainer(UserDict):
         function = TranslationFunc(original_name)
 
         self.add_field(
-                alias_name,
-                function=function,
-                sampling_type=self[original_name].sampling_type,
-                display_name=self[original_name].display_name,
-                units=units,
-                alias=self[original_name],
-            )
+            alias_name,
+            function=function,
+            sampling_type=self[original_name].sampling_type,
+            display_name=self[original_name].display_name,
+            units=units,
+            alias=self[original_name],
+        )
 
     def __contains__(self, key):
         if super().__contains__(key):
             return True
         if self.fallback is None:
             return False
-
 
     def check_derived_fields(self, fields_to_check=None):
         # The following exceptions lists were obtained by expanding an
@@ -1266,10 +1202,9 @@ class StreamFieldInfo(FieldInfoContainer):
     def setup_fluid_fields(self):
         species_names = []
         for field in self.ds.stream_handler.field_units:
-            units = self.ds.stream_handler.field_units[field]
+            self.ds.stream_handler.field_units[field]
 
         self.species_names = sorted(species_names)
-
 
     def add_output_field(self, name, sampling_type, **kwargs):
         if name in self.ds.stream_handler.field_units:
