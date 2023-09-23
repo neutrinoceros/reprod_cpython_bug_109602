@@ -385,9 +385,6 @@ class Dataset:
 
         self.domain_left_edge = stream_handler.domain_left_edge.copy()
         self.domain_right_edge = stream_handler.domain_right_edge.copy()
-        self.refine_by = stream_handler.refine_by
-        self.dimensionality = stream_handler.dimensionality
-        self._periodicity = (True, True, True)
         self.domain_dimensions = stream_handler.domain_dimensions
         self.current_time = stream_handler.simulation_time
 
@@ -476,9 +473,7 @@ def load_uniform_grid(
     handler.name = "UniformGridData"
     handler.domain_left_edge = domain_left_edge
     handler.domain_right_edge = domain_right_edge
-    handler.refine_by = 2
 
-    handler.dimensionality = 3
     handler.domain_dimensions = domain_dimensions
     handler.simulation_time = 1.0
     handler.cosmology_simulation = 0
