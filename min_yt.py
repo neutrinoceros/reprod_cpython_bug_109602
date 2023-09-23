@@ -280,18 +280,6 @@ class Dataset(abc.ABC):
     def field_list(self):
         return self.index.field_list
 
-    def create_field_info(self):
-        self.field_dependencies = {}
-        self.derived_field_list = []
-        self.field_info = self._field_info_class(self, self.field_list)
-        self.coordinates.setup_fields(self.field_info)
-        self.field_info.setup_fluid_fields()
-        self.field_info.setup_fluid_index_fields()
-
-        self.field_info.load_all_plugins(self.default_fluid_type)
-        deps, unloaded = self.field_info.check_derived_fields()
-        self.field_dependencies.update(deps)
-
     def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 

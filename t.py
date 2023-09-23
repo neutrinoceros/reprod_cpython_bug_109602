@@ -12,8 +12,18 @@ def foo():
     ds._instantiated_index = ds._index_class(
         ds, dataset_type=ds.dataset_type
     )
-    ds.create_field_info()
 
+    # inline ds.create_field_info()
+    ds.field_dependencies = {}
+    ds.derived_field_list = []
+    ds.field_info = ds._field_info_class(ds, ds.field_list)
+    ds.coordinates.setup_fields(ds.field_info)
+    ds.field_info.setup_fluid_fields()
+    ds.field_info.setup_fluid_index_fields()
+
+    ds.field_info.load_all_plugins(ds.default_fluid_type)
+    deps, unloaded = ds.field_info.check_derived_fields()
+    ds.field_dependencies.update(deps)
 
 NLOOPS = 200
 for i in range(NLOOPS):
