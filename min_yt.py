@@ -74,19 +74,11 @@ class DerivedField:
 
         # handle units
         self.units: Optional[Union[str, bytes, Unit]]
-        if units in (None, "auto"):
-            self.units = None
-        elif isinstance(units, str):
+        if isinstance(units, str):
             self.units = units
-        elif isinstance(units, Unit):
-            self.units = str(units)
-        elif isinstance(units, bytes):
-            self.units = units.decode("utf-8")
         else:
-            raise FieldUnitsError(
-                f"Cannot handle units {units!r} (type {type(units)}). "
-                "Please provide a string or Unit object."
-            )
+            self.units = str(units)
+
         if output_units is None:
             output_units = self.units
         self.output_units = output_units
@@ -115,29 +107,15 @@ class DerivedField:
     @contextlib.contextmanager
     def unit_registry(self, data):
         old_registry = self._unit_registry
-        if hasattr(data, "unit_registry"):
-            ur = data.unit_registry
-        elif hasattr(data, "ds"):
-            ur = data.ds.unit_registry
-        else:
-            ur = None
+        ur = data.ds.unit_registry
         self._unit_registry = ur
         yield
         self._unit_registry = old_registry
 
     def __call__(self, data):
         """Return the value of the field in a given *data* object."""
-        original_fields = data.keys()  # Copy
-        if self._function is NullFunc:
-            raise RuntimeError(
-                "Something has gone terribly wrong, _function is NullFunc "
-                + f"for {self.name}"
-            )
         with self.unit_registry(data):
             dd = self._function(self, data)
-        for field_name in data.keys():
-            if field_name not in original_fields:
-                del data[field_name]
         return dd
 
 
@@ -243,16 +221,14 @@ class Dataset(abc.ABC):
     def _set_derived_attrs(self):
         self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
         self.domain_width = self.domain_right_edge - self.domain_left_edge
-        if not isinstance(self.current_time, YTQuantity):
-            self.current_time = self.quan(self.current_time, "code_time")
+        self.current_time = self.quan(self.current_time, "code_time")
         for attr in ("center", "width", "left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
-            if not isinstance(v, YTArray) and v is not None:
-                # Note that we don't add on _ipython_display_ here because
-                # everything is stored inside a MutableAttribute.
-                v = self.arr(v, "code_length")
-                setattr(self, n, v)
+            # Note that we don't add on _ipython_display_ here because
+            # everything is stored inside a MutableAttribute.
+            v = self.arr(v, "code_length")
+            setattr(self, n, v)
 
     _instantiated_index = None
 
@@ -273,13 +249,8 @@ class Dataset(abc.ABC):
 
     def _get_field_info_helper(self, field, /):
         self.index
+        ftype, fname = field
 
-        ftype: str
-        fname: str
-        if isinstance(field, tuple) and len(field) == 2:
-            ftype, fname = field
-        else:
-            raise TypeError(field)
 
         if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname], []
@@ -665,11 +636,6 @@ class GridIndex(Index, abc.ABC):
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
 
-    def get_smallest_dx(self):
-        """
-        Returns (in code units) the smallest cell size in the simulation.
-        """
-        return self.select_grids(self.grid_levels.max())[0].dds[:].min()
 
     def _initialize_level_stats(self):
         # Now some statistics:
@@ -745,11 +711,6 @@ class StreamHierarchy(GridIndex):
             self.grids.append(self.grid(id, self))
             self.grids[id].Level = self.grid_levels[id, 0]
         reverse_tree = self.stream_handler.parent_ids.tolist()
-        # Initial setup:
-        for gid, pid in enumerate(reverse_tree):
-            if pid >= 0:
-                self.grids[gid]._parent_id = pid
-                self.grids[pid]._children_ids.append(self.grids[gid].id)
 
         self.max_level = self.grid_levels.max()
         temp_grids = np.empty(self.num_grids, dtype="object")
