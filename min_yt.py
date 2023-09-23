@@ -265,21 +265,6 @@ class YTRegion(YTDataContainer):
         return self.ds.min_level
 
 
-def requires_index(attr_name):
-    @property
-    def ireq(self):
-        self.index
-        # By now it should have been set
-        attr = self.__dict__[attr_name]
-        return attr
-
-    @ireq.setter
-    def ireq(self, value):
-        self.__dict__[attr_name] = value
-
-    return ireq
-
-
 class StreamDictFieldHandler(UserDict):
     @property
     def all_fields(self):
@@ -334,8 +319,6 @@ class Dataset(abc.ABC):
     storage_filename = None
     _index_class: type[Index]
     field_units: Optional[dict[AnyFieldKey, Unit]] = None
-    derived_field_list = requires_index("derived_field_list")
-    fields = requires_index("fields")
     conversion_factors: Optional[dict[str, float]] = None
     # _instantiated represents an instantiation time (since Epoch)
     # the default is a place holder sentinel, falsy value
