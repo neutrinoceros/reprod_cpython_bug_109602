@@ -31,14 +31,10 @@ def TranslationFunc(field_name):
 
 
 class FieldDetector(defaultdict):
-    def __init__(self, nd=16, ds=None, flat=False):
+    def __init__(self, nd=16, ds=None):
         self.nd = nd
-        self.flat = flat
-        self._spatial = not flat
         self.shape = tuple([nd, nd, nd])
         self.size = np.prod([nd, nd, nd])
-        self.LeftEdge = [0.0, 0.0, 0.0]
-        self.RightEdge = [1.0, 1.0, 1.0]
         self.dds = np.ones(3, "float64")
         self.field_parameters = {}
 
@@ -97,8 +93,7 @@ class FieldDetector(defaultdict):
     @property
     def fwidth(self):
         fw = np.ones((self.nd**3, 3), dtype="float64") / self.nd
-        if not self.flat:
-            fw.shape = (self.nd, self.nd, self.nd, 3)
+        fw.shape = (self.nd, self.nd, self.nd, 3)
         return self.ds.arr(fw, units="code_length")
 
 
