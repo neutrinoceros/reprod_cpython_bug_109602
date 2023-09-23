@@ -161,30 +161,8 @@ class YTDataContainer(abc.ABC):
 
 
 
-class Communicator:
-    comm = None
-    _grids = None
-    _distributed = None
-    __tocast = "c"
 
-    def __init__(self, comm=None):
-        self.comm = comm
-        self._distributed = comm is not None and self.comm.size > 1
-
-
-GLOBAL_COMMUNICATOR = Communicator(None)
-class ParallelAnalysisInterface:
-    comm = None
-    _grids = None
-    _distributed = None
-
-    def __init__(self, comm=None):
-        self.comm = GLOBAL_COMMUNICATOR
-        self._grids = self.comm._grids
-        self._distributed = self.comm._distributed
-
-
-class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
+class YTSelectionContainer(YTDataContainer, abc.ABC):
     _locked = False
     _sort_by = None
     _selector = None
@@ -196,7 +174,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     _derived_quantity_chunking = "io"
 
     def __init__(self, ds, field_parameters, data_source=None):
-        ParallelAnalysisInterface.__init__(self)
         super().__init__(ds, field_parameters)
         self._data_source = data_source
         self.quantities = DerivedQuantityCollection(self)
