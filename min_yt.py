@@ -304,7 +304,6 @@ class Dataset(abc.ABC):
         else:
             raise YTFieldNotFound(field, ds=self)
 
-
     def _assign_unit_system(self, unit_system) -> None:
         # we need to determine if the requested unit system
         # is mks-like: i.e., it has a current with the same
