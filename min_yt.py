@@ -51,7 +51,6 @@ class DerivedField:
         sampling_type,
         function,
         units: Optional[Union[str, bytes, Unit]] = None,
-        take_log=True,
         validators=None,
         vector_field=False,
         display_field=True,
@@ -64,7 +63,6 @@ class DerivedField:
         alias: Optional["DerivedField"] = None,
     ):
         self.name = name
-        self.take_log = take_log
         self.display_name = display_name
         self.not_in_all = not_in_all
         self.display_field = display_field
@@ -644,24 +642,7 @@ class FieldInfoContainer(UserDict):
             dfl = filtered_dfl
 
         self.ds.derived_field_list = dfl
-        self._set_linear_fields()
         return deps, unavailable
-
-    def _set_linear_fields(self):
-        """
-        Sets which fields use linear as their default scaling in Profiles and
-        PhasePlots. Default for all fields is set to log, so this sets which
-        are linear.  For now, set linear to geometric fields: position and
-        velocity coordinates.
-        """
-        non_log_prefixes = ("", "velocity_", "particle_position_", "particle_velocity_")
-        coords = ("x", "y", "z")
-        non_log_fields = [
-            prefix + coord for prefix in non_log_prefixes for coord in coords
-        ]
-        for field in self.ds.derived_field_list:
-            if field[1] in non_log_fields:
-                self[field].take_log = False
 
 
 class GridIndex(Index, abc.ABC):
