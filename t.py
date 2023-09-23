@@ -24,7 +24,7 @@ def foo():
     ds.field_info.load_all_plugins(ds.default_fluid_type)
     deps, unloaded = ds.field_info.check_derived_fields()
 
-NLOOPS = 1
+NLOOPS = 200
 for i in range(NLOOPS):
     foo()
     print(f"{i}/{NLOOPS}", end="\r")

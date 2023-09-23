@@ -470,32 +470,6 @@ class FieldInfoContainer(UserDict):
             return False
 
     def check_derived_fields(self, fields_to_check=None):
-        # The following exceptions lists were obtained by expanding an
-        # all-catching `except Exception`.
-        # We define
-        # - a blacklist (exceptions that we know should be caught)
-        # - a whitelist (exceptions that should be handled)
-        # - a greylist (exceptions that may be covering bugs but should be checked)
-        # See https://github.com/yt-project/yt/issues/2853
-        # in the long run, the greylist should be removed
-        whitelist = (NotImplementedError,)
-        greylist = (
-            YTFieldNotFound,
-            YTDomainOverflow,
-            YTCoordinateNotImplemented,
-            NeedsConfiguration,
-            TypeError,
-            ValueError,
-            IndexError,
-            AttributeError,
-            KeyError,
-            # code smells -> those are very likely bugs
-            UnitConversionError,  # solved in GH PR 2897 ?
-            # RecursionError is clearly a bug, and was already solved once
-            # in GH PR 2851
-            RecursionError,
-        )
-
         deps = {}
         unavailable = []
         fields_to_check = fields_to_check or list(self.keys())
@@ -503,7 +477,7 @@ class FieldInfoContainer(UserDict):
             fi = self[field]
             try:
                 fd = fi.get_dependencies(ds=self.ds)
-            except (*whitelist, *greylist):
+            except (NotImplementedError, YTFieldNotFound):
                 self.pop(field)
                 continue
             # This next bit checks that we can't somehow generate everything.
