@@ -254,8 +254,6 @@ class Dataset(abc.ABC):
         # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
         unit_system="cgs",
         default_species_fields=None,
-        *,
-        axis_order: AxisOrder | None = None,
     ) -> None:
         # We return early and do NOT initialize a second time if this file has
         # already been initialized.
@@ -275,7 +273,7 @@ class Dataset(abc.ABC):
 
         self._parse_parameter_file()
         self._assign_unit_system(unit_system)
-        self._setup_coordinate_handler(axis_order)
+        self.coordinates = CartesianCoordinateHandler(self)
         self._set_derived_attrs()
         self.object_types = []
         self.objects = []
@@ -298,13 +296,6 @@ class Dataset(abc.ABC):
     @property
     def index(self):
         return self._instantiated_index
-
-    @property
-    def field_list(self):
-        return self.index.field_list
-
-    def _setup_coordinate_handler(self, axis_order: AxisOrder | None) -> None:
-        self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 
     def _get_field_info(self, field, /):
         field_info, candidates = self._get_field_info_helper(field)
