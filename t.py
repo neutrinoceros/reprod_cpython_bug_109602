@@ -9,7 +9,15 @@ def foo():
         data={("gas", "density"): np.ones(shape)},
         domain_dimensions=shape,
     )
-    ds.index
+    ds._instantiated_index = ds._index_class(
+        ds, dataset_type=ds.dataset_type
+    )
+    # Now we do things that we need an instantiated index for
+    # ...first off, we create our field_info now.
+    oldsettings = np.geterr()
+    np.seterr(all="ignore")
+    ds.create_field_info()
+    np.seterr(**oldsettings)
 
 
 NLOOPS = 200
