@@ -16,7 +16,6 @@ from yt.fields.derived_field import TranslationFunc
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import YTQuantity, dimensions
-from yt.units.dimensions import current_mks
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray
@@ -269,14 +268,9 @@ class Dataset(abc.ABC):
         # we need to determine if the requested unit system
         # is mks-like: i.e., it has a current with the same
         # dimensions as amperes.
-        mks_system = False
         us = unit_system_registry[str(unit_system).lower()]
-        mks_system = us.base_units[current_mks] is not None
 
-        current_mks_unit = "A" if mks_system else None
-        us = create_code_unit_system(
-            self.unit_registry, current_mks_unit=current_mks_unit
-        )
+        us = create_code_unit_system(self.unit_registry, current_mks_unit=None)
         us = unit_system_registry[str(unit_system).lower()]
 
         self._unit_system_name: str = unit_system
