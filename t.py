@@ -9,7 +9,7 @@ def foo():
         data={("gas", "density"): np.ones(shape)},
         domain_dimensions=shape,
     )
-    ds._instantiated_index = StreamHierarchy(
+    ds.index = StreamHierarchy(
         ds, dataset_type=ds.dataset_type
     )
 

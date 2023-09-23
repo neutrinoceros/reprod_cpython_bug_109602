@@ -291,12 +291,6 @@ class Dataset(abc.ABC):
             v = self.arr(v, "code_length")
             setattr(self, n, v)
 
-    _instantiated_index = None
-
-    @property
-    def index(self):
-        return self._instantiated_index
-
     def _get_field_info(self, field, /):
         ftype, fname = field
         if (ftype, fname) in self.field_info:
