@@ -11,7 +11,6 @@ from itertools import chain
 
 import numpy as np
 from unyt import Unit
-from yt.frontends.stream.io import IOHandlerStream
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
@@ -20,6 +19,42 @@ from yt.units.unit_systems import unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
+
+io_registry = {}
+
+use_caching = 0
+
+
+class BaseIOHandler:
+    _vector_fields: dict[str, int] = {}
+    _dataset_type: str
+    _particle_reader = False
+    _cache_on = False
+    _misses = 0
+    _hits = 0
+
+    def __init_subclass__(cls, *args, **kwargs):
+        super().__init_subclass__(*args, **kwargs)
+        if hasattr(cls, "_dataset_type"):
+            io_registry[cls._dataset_type] = cls
+
+    def __init__(self, ds):
+        self.queue = defaultdict(dict)
+        self.ds = ds
+        self._last_selector_id = None
+        self._last_selector_counts = None
+        self._array_fields = {}
+        self._cached_fields = {}
+
+
+class IOHandlerStream(BaseIOHandler):
+    _dataset_type = "stream"
+    _vector_fields = {"particle_velocity": 3, "particle_position": 3}
+
+    def __init__(self, ds):
+        self.fields = ds.stream_handler.fields
+        self.field_units = ds.stream_handler.field_units
+        super().__init__(ds)
 
 
 def TranslationFunc(field_name):
