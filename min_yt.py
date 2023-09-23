@@ -235,8 +235,6 @@ class Dataset(abc.ABC):
         self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
-
-        self.no_cgs_equiv_length = False
         self._create_unit_registry("cgs")
 
         self._parse_parameter_file()
