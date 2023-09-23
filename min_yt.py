@@ -16,7 +16,7 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 import yt.geometry.selection_routines
 from more_itertools import always_iterable
-from unyt import Unit, UnitSystem, unyt_quantity
+from unyt import Unit, UnitSystem
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
 from yt.data_objects.field_data import YTFieldData
@@ -29,24 +29,22 @@ from yt.fields.field_exceptions import (
 )
 from yt.fields.field_plugin_registry import FunctionName
 from yt.frontends.stream.api import StreamHierarchy
-from yt.funcs import iter_fields, obj_length, validate_field_key
+from yt.funcs import iter_fields, validate_field_key
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import UnitContainer, dimensions
+from yt.units import dimensions
 from yt.units.dimensions import current_mks, dimensionless
 from yt.units.unit_object import Unit  # type: ignore
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import (
-    GenerationInProgress,
     YTCoordinateNotImplemented,
     YTDomainOverflow,
     YTFieldNotFound,
 )
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
-
 
 
 class DerivedField:
@@ -385,7 +383,6 @@ class YTRegion(YTDataContainer):
         # need to be used in spatial fields later on.
         fields_to_get = []
         # This will be pre-populated with spatial fields
-        fields_to_generate = []
         for field in self._determine_fields(fields):
             finfo = self.ds._get_field_info(field)
             finfo.check_available(self)
@@ -736,9 +733,6 @@ class Dataset(abc.ABC):
                 "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
             )
 
-    #_units = None
-    #_unit_system_id = None
-
     _arr = None
 
     @property
@@ -935,9 +929,7 @@ class FieldInfoContainer(UserDict):
             return
 
         kwargs.setdefault("ds", self.ds)
-        self[name] = DerivedField(
-                name, sampling_type, function, alias=alias, **kwargs
-            )
+        self[name] = DerivedField(name, sampling_type, function, alias=alias, **kwargs)
 
     def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
         loaded = []
@@ -1060,7 +1052,7 @@ class FieldInfoContainer(UserDict):
             fi = self[field]
             try:
                 fd = fi.get_dependencies(ds=self.ds)
-            except (*whitelist, *greylist) as e:
+            except (*whitelist, *greylist):
                 self.pop(field)
                 continue
             # This next bit checks that we can't somehow generate everything.
