@@ -123,15 +123,14 @@ class FieldDetector(defaultdict):
 class DerivedField:
     def __init__(
         self,
-        name: FieldKey,
+        name,
         sampling_type,
         function,
-        units: str | (bytes | Unit) | None = None,
+        units=None,
         vector_field=False,
         display_field=True,
         not_in_all=False,
         display_name=None,
-        dimensions=None,
         ds=None,
         *,
         alias: DerivedField | None = None,
@@ -152,9 +151,6 @@ class DerivedField:
             self.units = units
         else:
             self.units = str(units)
-
-        self.output_units = self.units
-        self.dimensions = dimensions
 
         if alias is None:
             self._shared_aliases_list = [self]
