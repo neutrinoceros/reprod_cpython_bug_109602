@@ -20,23 +20,14 @@ from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
-io_registry = {}
 
-use_caching = 0
 
 
 class BaseIOHandler:
     _vector_fields: dict[str, int] = {}
     _dataset_type: str
-    _particle_reader = False
-    _cache_on = False
     _misses = 0
     _hits = 0
-
-    def __init_subclass__(cls, *args, **kwargs):
-        super().__init_subclass__(*args, **kwargs)
-        if hasattr(cls, "_dataset_type"):
-            io_registry[cls._dataset_type] = cls
 
     def __init__(self, ds):
         self.queue = defaultdict(dict)
@@ -48,7 +39,6 @@ class BaseIOHandler:
 
 
 class IOHandlerStream(BaseIOHandler):
-    _dataset_type = "stream"
     _vector_fields = {"particle_velocity": 3, "particle_position": 3}
 
     def __init__(self, ds):
