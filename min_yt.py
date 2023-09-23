@@ -12,11 +12,12 @@ import numpy as np
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.yt_array import YTArray, YTQuantity
-
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
+
 
 class YTFieldNotFound(Exception):
     pass
+
 
 class CartesianCoordinateHandler:
     def __init__(self, ds):
