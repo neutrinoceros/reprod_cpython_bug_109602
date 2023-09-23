@@ -7,7 +7,6 @@ from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
-from yt.units.yt_array import YTQuantity
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
@@ -355,7 +354,6 @@ class Dataset:
 
         self.coordinates = CartesianCoordinateHandler(self)
         self.arr = np.array
-        self.quan = YTQuantity
         for attr in ("left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
