@@ -7,7 +7,7 @@ import os
 import time
 import uuid
 import weakref
-from collections import UserDict, defaultdict
+from collections import UserDict
 from collections.abc import Callable
 from itertools import chain
 from typing import Any, Literal, Optional, Union
@@ -29,23 +29,14 @@ from yt.fields.field_exceptions import NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName, field_plugins
 from yt.fields.field_type_container import FieldTypeContainer
 from yt.frontends.stream.api import StreamHierarchy
-from yt.funcs import (
-    iter_fields,
-    obj_length,
-)
+from yt.funcs import iter_fields, obj_length
 from yt.geometry.api import Geometry
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import UnitContainer, dimensions
-from yt.units.dimensions import (
-    current_mks,
-    dimensionless,  # type: ignore
-)
+from yt.units.dimensions import current_mks, dimensionless
 from yt.units.unit_registry import UnitRegistry  # type: ignore
-from yt.units.unit_systems import (
-    create_code_unit_system,
-    unit_system_registry,
-)
+from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import (
     GenerationInProgress,
@@ -148,8 +139,6 @@ class YTDataContainer(abc.ABC):
 
         self.ds._determined_fields[str(fields)] = explicit_fields
         return explicit_fields
-
-
 
 
 class YTRegion(YTDataContainer):
@@ -361,7 +350,6 @@ class Dataset(abc.ABC):
     # map to (0, 0, 0)
     domain_offset = np.zeros(3, dtype="int64")
     _force_periodicity = False
-
 
     def __init__(
         self,
