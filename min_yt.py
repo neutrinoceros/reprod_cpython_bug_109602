@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import functools
+import inspect
 import itertools
 import os
+import re
 import time
 import uuid
 import weakref
@@ -14,25 +17,28 @@ from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import yt.geometry.selection_routines
+import yt.units.dimensions as ytdims
+from more_itertools import always_iterable
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
+from yt._maintenance.deprecation import issue_deprecation_warning
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
-from yt.fields.derived_field import (
-    DerivedField,
-    NullFunc,
-    TranslationFunc,
+from yt.fields.derived_field import NullFunc, TranslationFunc
+from yt.fields.field_detector import FieldDetector
+from yt.fields.field_exceptions import (
+    FieldUnitsError,
+    NeedsConfiguration,
 )
-from yt.fields.field_exceptions import NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName
-from yt.fields.field_type_container import FieldTypeContainer
 from yt.frontends.stream.api import StreamHierarchy
-from yt.funcs import iter_fields, obj_length
+from yt.funcs import iter_fields, obj_length, validate_field_key
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import UnitContainer, dimensions
 from yt.units.dimensions import current_mks, dimensionless
+from yt.units.unit_object import Unit  # type: ignore
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
@@ -44,6 +50,186 @@ from yt.utilities.exceptions import (
 )
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
+from yt.visualization._commons import _get_units_label
+
+
+class DerivedField:
+    """
+    This is the base class used to describe a cell-by-cell derived field.
+
+    Parameters
+    ----------
+
+    name : str
+       is the name of the field.
+    function : callable
+       A function handle that defines the field.  Should accept
+       arguments (field, data)
+    units : str
+       A plain text string encoding the unit, or a query to a unit system of
+       a dataset. Powers must be in Python syntax (** instead of ^). If set
+       to 'auto' or None (default), units will be inferred from the return value
+       of the field function.
+    take_log : bool
+       Describes whether the field should be logged
+    validators : list
+       A list of :class:`FieldValidator` objects
+    sampling_type : string, default = "cell"
+        How is the field sampled?  This can be one of the following options at
+        present: "cell" (cell-centered), "discrete" (or "particle") for
+        discretely sampled data.
+    vector_field : bool
+       Describes the dimensionality of the field.  Currently unused.
+    display_field : bool
+       Governs its appearance in the dropdowns in Reason
+    not_in_all : bool
+       Used for baryon fields from the data that are not in all the grids
+    display_name : str
+       A name used in the plots
+    output_units : str
+       For fields that exist on disk, which we may want to convert to other
+       fields or that get aliased to themselves, we can specify a different
+       desired output unit than the unit found on disk.
+    dimensions : str or object from yt.units.dimensions
+       The dimensions of the field, only used for error checking with units='auto'.
+    nodal_flag : array-like with three components
+       This describes how the field is centered within a cell. If nodal_flag
+       is [0, 0, 0], then the field is cell-centered. If any of the components
+       of nodal_flag are 1, then the field is nodal in that direction, meaning
+       it is defined at the lo and hi sides of the cell rather than at the center.
+       For example, a field with nodal_flag = [1, 0, 0] would be defined at the
+       middle of the 2 x-faces of each cell. nodal_flag = [0, 1, 1] would mean the
+       that the field defined at the centers of the 4 edges that are normal to the
+       x axis, while nodal_flag = [1, 1, 1] would be defined at the 8 cell corners.
+    """
+
+    _inherited_particle_filter = False
+
+    def __init__(
+        self,
+        name: FieldKey,
+        sampling_type,
+        function,
+        units: Optional[Union[str, bytes, Unit]] = None,
+        take_log=True,
+        validators=None,
+        vector_field=False,
+        display_field=True,
+        not_in_all=False,
+        display_name=None,
+        output_units=None,
+        dimensions=None,
+        ds=None,
+        *,
+        alias: Optional["DerivedField"] = None,
+    ):
+        validate_field_key(name)
+        self.name = name
+        self.take_log = take_log
+        self.display_name = display_name
+        self.not_in_all = not_in_all
+        self.display_field = display_field
+        self.sampling_type = sampling_type
+        self.vector_field = vector_field
+        self.ds = ds
+        self._ionization_label_format = self.ds._ionization_label_format
+
+        self.nodal_flag = [0, 0, 0]
+
+        self._function = function
+
+        self.validators = list(always_iterable(validators))
+
+        # handle units
+        self.units: Optional[Union[str, bytes, Unit]]
+        if units in (None, "auto"):
+            self.units = None
+        elif isinstance(units, str):
+            self.units = units
+        elif isinstance(units, Unit):
+            self.units = str(units)
+        elif isinstance(units, bytes):
+            self.units = units.decode("utf-8")
+        else:
+            raise FieldUnitsError(
+                f"Cannot handle units {units!r} (type {type(units)}). "
+                "Please provide a string or Unit object."
+            )
+        if output_units is None:
+            output_units = self.units
+        self.output_units = output_units
+
+        self.dimensions = dimensions
+
+        if alias is None:
+            self._shared_aliases_list = [self]
+        else:
+            self._shared_aliases_list = alias._shared_aliases_list
+            self._shared_aliases_list.append(self)
+
+
+    def check_available(self, data):
+        """
+        This raises an exception of the appropriate type if the set of
+        validation mechanisms are not met, and otherwise returns True.
+        """
+        for validator in self.validators:
+            validator(data)
+        # If we don't get an exception, we're good to go
+        return True
+
+    def get_dependencies(self, *args, **kwargs):
+        """
+        This returns a list of names of fields that this field depends on.
+        """
+        e = FieldDetector(*args, **kwargs)
+        e[self.name]
+        return e
+
+    def _get_needed_parameters(self, fd):
+        params = []
+        values = []
+        permute_params = {}
+        vals = [v for v in self.validators if isinstance(v, ValidateParameter)]
+        for val in vals:
+            if val.parameter_values is not None:
+                permute_params.update(val.parameter_values)
+            else:
+                params.extend(val.parameters)
+                values.extend([fd.get_field_parameter(fp) for fp in val.parameters])
+        return dict(zip(params, values)), permute_params
+
+    _unit_registry = None
+
+    @contextlib.contextmanager
+    def unit_registry(self, data):
+        old_registry = self._unit_registry
+        if hasattr(data, "unit_registry"):
+            ur = data.unit_registry
+        elif hasattr(data, "ds"):
+            ur = data.ds.unit_registry
+        else:
+            ur = None
+        self._unit_registry = ur
+        yield
+        self._unit_registry = old_registry
+
+    def __call__(self, data):
+        """Return the value of the field in a given *data* object."""
+        self.check_available(data)
+        original_fields = data.keys()  # Copy
+        if self._function is NullFunc:
+            raise RuntimeError(
+                "Something has gone terribly wrong, _function is NullFunc "
+                + f"for {self.name}"
+            )
+        with self.unit_registry(data):
+            dd = self._function(self, data)
+        for field_name in data.keys():
+            if field_name not in original_fields:
+                del data[field_name]
+        return dd
+
 
 
 class YTDataContainer(abc.ABC):
@@ -429,17 +615,17 @@ class Dataset(abc.ABC):
 
     def _get_field_info(
         self,
-        field: Union[FieldKey, ImplicitFieldKey, DerivedField],
-        /,
-    ) -> DerivedField:
+        field,
+        /
+    ):
         field_info, candidates = self._get_field_info_helper(field)
         return field_info
 
     def _get_field_info_helper(
         self,
-        field: Union[FieldKey, ImplicitFieldKey, DerivedField],
-        /,
-    ) -> tuple[DerivedField, list[FieldKey]]:
+        field,
+        /
+    ):
         self.index
 
         ftype: str
@@ -776,7 +962,7 @@ class FieldInfoContainer(UserDict):
         function: Callable,
         sampling_type: str,
         *,
-        alias: Optional[DerivedField] = None,
+        alias= None,
         force_override: bool = False,
         **kwargs,
     ) -> None:
@@ -927,7 +1113,6 @@ class FieldInfoContainer(UserDict):
         # - a greylist (exceptions that may be covering bugs but should be checked)
         # See https://github.com/yt-project/yt/issues/2853
         # in the long run, the greylist should be removed
-        blacklist = ()
         whitelist = (NotImplementedError,)
         greylist = (
             YTFieldNotFound,
@@ -952,11 +1137,7 @@ class FieldInfoContainer(UserDict):
         for field in fields_to_check:
             fi = self[field]
             try:
-                # fd: field detector
                 fd = fi.get_dependencies(ds=self.ds)
-            except blacklist as err:
-                print(f"{err.__class__} raised for field {field}")
-                raise SystemExit(1) from err
             except (*whitelist, *greylist) as e:
                 if field in self._show_field_errors:
                     raise
