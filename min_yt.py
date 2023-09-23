@@ -24,11 +24,6 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
 class BaseIOHandler:
-    _vector_fields: dict[str, int] = {}
-    _dataset_type: str
-    _misses = 0
-    _hits = 0
-
     def __init__(self, ds):
         self.queue = defaultdict(dict)
         self.ds = ds
@@ -39,8 +34,6 @@ class BaseIOHandler:
 
 
 class IOHandlerStream(BaseIOHandler):
-    _vector_fields = {"particle_velocity": 3, "particle_position": 3}
-
     def __init__(self, ds):
         self.fields = ds.stream_handler.fields
         self.field_units = ds.stream_handler.field_units
