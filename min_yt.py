@@ -360,10 +360,8 @@ class Dataset:
     def __init__(self, *, stream_handler):
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
-        self.filename = self.stream_handler.name
         # We return early and do NOT initialize a second time if this file has
         # already been initialized.
-        self.dataset_type = "stream"
         self.conversion_factors = {}
         self.parameters = {}
         self.field_units = {}
