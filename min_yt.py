@@ -7,7 +7,7 @@ from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
-from yt.units.yt_array import YTArray, YTQuantity
+from yt.units.yt_array import YTQuantity
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
@@ -22,7 +22,7 @@ class CartesianCoordinateHandler:
     def setup_fields(self, registry):
         def _get_vert_fields(axi, units="cm"):
             def _vert(field, data):
-                rv = data.ds.arr(data.fcoords_vertex[..., axi].copy(), units)
+                rv = data.ds.arr(data.fcoords_vertex[..., axi].copy())
                 return rv
 
             return _vert
@@ -80,7 +80,7 @@ class FieldDetector(defaultdict):
     @property
     def fcoords_vertex(self):
         fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
-        return self.ds.arr(fc, units="cm")
+        return self.ds.arr(fc)
 
 
 class DerivedField:
@@ -289,10 +289,10 @@ class StreamHierarchy:
         self._count_grids()
         self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
         self.grid_left_edge = self.ds.arr(
-            np.zeros((self.num_grids, 3), self.float_type), "cm"
+            np.zeros((self.num_grids, 3), self.float_type)
         )
         self.grid_right_edge = self.ds.arr(
-            np.ones((self.num_grids, 3), self.float_type), "cm"
+            np.ones((self.num_grids, 3), self.float_type)
         )
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
@@ -354,14 +354,14 @@ class Dataset:
         self.domain_dimensions = stream_handler.domain_dimensions
 
         self.coordinates = CartesianCoordinateHandler(self)
-        self.arr = YTArray
+        self.arr = np.array
         self.quan = YTQuantity
         for attr in ("left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
             # Note that we don't add on _ipython_display_ here because
             # everything is stored inside a MutableAttribute.
-            v = self.arr(v, "cm")
+            v = self.arr(v)
             setattr(self, n, v)
 
     def _get_field_info(self, field, /):
