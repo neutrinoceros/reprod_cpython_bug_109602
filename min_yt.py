@@ -11,16 +11,24 @@ from itertools import chain
 
 import numpy as np
 from unyt import Unit
-from yt.fields.derived_field import TranslationFunc
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import YTQuantity, dimensions
+from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
-from yt.units.yt_array import YTArray
+from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
+
+
+def TranslationFunc(field_name):
+    def _TranslationFunc(field, data):
+        # We do a bunch of in-place modifications, so we will copy this.
+        return data[field_name].copy()
+
+    _TranslationFunc.alias_name = field_name
+    return _TranslationFunc
 
 
 class FieldDetector(defaultdict):
