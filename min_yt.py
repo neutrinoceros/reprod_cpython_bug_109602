@@ -8,11 +8,10 @@ import weakref
 from collections import UserDict
 from collections.abc import Callable
 from itertools import chain
-from typing import Any, Literal, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from unyt import Unit, UnitSystem
-from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import TranslationFunc
 from yt.fields.field_detector import FieldDetector
@@ -26,7 +25,6 @@ from yt.units.yt_array import YTArray
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
-from yt.utilities.object_registries import data_object_registry
 
 
 class DerivedField:
@@ -234,36 +232,9 @@ class Dataset(abc.ABC):
         self.object_types = []
         self.objects = []
         self.plots = []
-        for name, cls in sorted(data_object_registry.items()):
-            self._add_object_class(name, cls)
         self.object_types.sort()
 
-    def _add_object_class(self, name, base):
-        # skip projection data objects that don't make sense
-        # for this type of data
-        if "proj" in name and name != self._proj_type:
-            return
-        elif "proj" in name:
-            name = "proj"
-        self.object_types.append(name)
-        obj = functools.partial(base, ds=weakref.proxy(self))
-        obj.__doc__ = base.__doc__
-        setattr(self, name, obj)
-
-    def _assign_unit_system(
-        self,
-        # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
-        unit_system: Literal[
-            "cgs",
-            "mks",
-            "imperial",
-            "galactic",
-            "solar",
-            "geometrized",
-            "planck",
-            "code",
-        ],
-    ) -> None:
+    def _assign_unit_system(self, unit_system) -> None:
         # we need to determine if the requested unit system
         # is mks-like: i.e., it has a current with the same
         # dimensions as amperes.
@@ -523,32 +494,8 @@ class GridIndex(Index, abc.ABC):
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
 
 
-class StreamGrid(AMRGridPatch):
-    """
-    Class representing a single In-memory Grid instance.
-    """
-
-    __slots__ = ["proc_num"]
-    _id_offset = 0
-
-    def __init__(self, id, index):
-        """
-        Returns an instance of StreamGrid with *id*, associated with *filename*
-        and *index*.
-        """
-        # All of the field parameters will be passed to us as needed.
-        AMRGridPatch.__init__(self, id, filename=None, index=index)
-        self._children_ids = []
-        self._parent_id = -1
-        self.Level = -1
-
-    @property
-    def Parent(self):
-        return None
-
-
 class StreamHierarchy(GridIndex):
-    grid = StreamGrid
+    grid = object
 
     def __init__(self, ds, dataset_type=None):
         self.dataset_type = dataset_type
@@ -562,32 +509,6 @@ class StreamHierarchy(GridIndex):
     def _count_grids(self):
         self.num_grids = self.stream_handler.num_grids
 
-    def _parse_index(self):
-        self.grid_dimensions = self.stream_handler.dimensions
-        self.grid_left_edge[:] = self.stream_handler.left_edges
-        self.grid_right_edge[:] = self.stream_handler.right_edges
-        self.grid_levels[:] = self.stream_handler.levels
-        self.min_level = self.grid_levels.min()
-        self.grid_procs = self.stream_handler.processor_ids
-        self.grid_particle_count[:] = self.stream_handler.particle_count
-        self.grid_cell_widths = None
-        self.grids = []
-        # We enumerate, so it's 0-indexed id and 1-indexed pid
-        for id in range(self.num_grids):
-            self.grids.append(self.grid(id, self))
-            self.grids[id].Level = self.grid_levels[id, 0]
-        self.stream_handler.parent_ids.tolist()
-
-        self.max_level = self.grid_levels.max()
-        temp_grids = np.empty(self.num_grids, dtype="object")
-        for i, grid in enumerate(self.grids):
-            grid.filename = None
-            grid._prepare_grid()
-            grid._setup_dx()
-            grid.proc_num = self.grid_procs[i]
-            temp_grids[i] = grid
-        self.grids = temp_grids
-
     def _initialize_grid_arrays(self):
         GridIndex._initialize_grid_arrays(self)
         self.grid_procs = np.zeros((self.num_grids, 1), "int32")
@@ -599,11 +520,6 @@ class StreamHierarchy(GridIndex):
         fl = set(self.stream_handler.get_fields())
         fl.update(set(getattr(self, "field_list", [])))
         self.field_list = list(fl)
-
-    def _populate_grid_objects(self):
-        for g in self.grids:
-            g._setup_dx()
-        self.max_level = self.grid_levels.max()
 
     def _setup_data_io(self):
         self.io = io_registry[self.dataset_type](self.ds)
