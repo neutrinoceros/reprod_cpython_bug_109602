@@ -3505,49 +3505,6 @@ class Dataset(abc.ABC):
         deps, _ = self.field_info.check_derived_fields([name])
         self.field_dependencies.update(deps)
 
-    def add_mesh_sampling_particle_field(self, sample_field, ptype="all"):
-        """Add a new mesh sampling particle field
-
-        Creates a new particle field which has the value of the
-        *deposit_field* at the location of each particle of type
-        *ptype*.
-
-        Parameters
-        ----------
-
-        sample_field : tuple
-           The field name tuple of the mesh field to be deposited onto
-           the particles. This must be a field name tuple so yt can
-           appropriately infer the correct particle type.
-        ptype : string, default 'all'
-           The particle type onto which the deposition will occur.
-
-        Returns
-        -------
-
-        The field name tuple for the newly created field.
-
-        Examples
-        --------
-        >>> ds = yt.load("output_00080/info_00080.txt")
-        ... ds.add_mesh_sampling_particle_field(("gas", "density"), ptype="all")
-
-        >>> print("The density at the location of the particle is:")
-        ... print(ds.r["all", "cell_gas_density"])
-        The density at the location of the particle is:
-        [9.33886124e-30 1.22174333e-28 1.20402333e-28 ... 2.77410331e-30
-         8.79467609e-31 3.50665136e-30] g/cm**3
-
-        >>> len(ds.r["all", "cell_gas_density"]) == len(ds.r["all", "particle_ones"])
-        True
-
-        """
-        if isinstance(sample_field, tuple):
-            ftype, sample_field = sample_field[0], sample_field[1]
-        else:
-            raise RuntimeError
-
-        return self.index._add_mesh_sampling_particle_field(sample_field, ftype, ptype)
 
     def add_deposited_particle_field(
         self, deposit_field, method, kernel_name="cubic", weight_field=None
