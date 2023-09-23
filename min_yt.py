@@ -151,18 +151,13 @@ class StreamHandler:
 
 class Dataset(abc.ABC):
     default_fluid_type = "gas"
-    default_field = ("gas", "density")
     fluid_types: tuple[FieldType, ...] = ("gas", "deposit", "index")
     coordinates = None
     storage_filename = None
     _index_class: type[Index]
-    field_units: Optional[dict[AnyFieldKey, Unit]] = None
-    conversion_factors: Optional[dict[str, float]] = None
     _particle_type_counts = None
     _proj_type = "quad_proj"
-    _ionization_label_format = "roman_numeral"
     _determined_fields: Optional[dict[str, list[FieldKey]]] = None
-    fields_detected = False
 
     # the point in index space "domain_left_edge" doesn't necessarily
     # map to (0, 0, 0)
@@ -188,7 +183,7 @@ class Dataset(abc.ABC):
         self.conversion_factors = {}
         self.parameters: dict[str, Any] = {}
         self.region_expression = self.r = RegionExpression(self)
-        self.field_units = self.field_units or {}
+        self.field_units = {}
         self._determined_fields = {}
         self.units_override = units_override
         self.default_species_fields = default_species_fields
