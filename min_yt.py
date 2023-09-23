@@ -48,55 +48,6 @@ from yt.utilities.object_registries import data_object_registry
 
 
 class DerivedField:
-    """
-    This is the base class used to describe a cell-by-cell derived field.
-
-    Parameters
-    ----------
-
-    name : str
-       is the name of the field.
-    function : callable
-       A function handle that defines the field.  Should accept
-       arguments (field, data)
-    units : str
-       A plain text string encoding the unit, or a query to a unit system of
-       a dataset. Powers must be in Python syntax (** instead of ^). If set
-       to 'auto' or None (default), units will be inferred from the return value
-       of the field function.
-    take_log : bool
-       Describes whether the field should be logged
-    validators : list
-       A list of :class:`FieldValidator` objects
-    sampling_type : string, default = "cell"
-        How is the field sampled?  This can be one of the following options at
-        present: "cell" (cell-centered), "discrete" (or "particle") for
-        discretely sampled data.
-    vector_field : bool
-       Describes the dimensionality of the field.  Currently unused.
-    display_field : bool
-       Governs its appearance in the dropdowns in Reason
-    not_in_all : bool
-       Used for baryon fields from the data that are not in all the grids
-    display_name : str
-       A name used in the plots
-    output_units : str
-       For fields that exist on disk, which we may want to convert to other
-       fields or that get aliased to themselves, we can specify a different
-       desired output unit than the unit found on disk.
-    dimensions : str or object from yt.units.dimensions
-       The dimensions of the field, only used for error checking with units='auto'.
-    nodal_flag : array-like with three components
-       This describes how the field is centered within a cell. If nodal_flag
-       is [0, 0, 0], then the field is cell-centered. If any of the components
-       of nodal_flag are 1, then the field is nodal in that direction, meaning
-       it is defined at the lo and hi sides of the cell rather than at the center.
-       For example, a field with nodal_flag = [1, 0, 0] would be defined at the
-       middle of the 2 x-faces of each cell. nodal_flag = [0, 1, 1] would mean the
-       that the field defined at the centers of the 4 edges that are normal to the
-       x axis, while nodal_flag = [1, 1, 1] would be defined at the 8 cell corners.
-    """
-
     _inherited_particle_filter = False
 
     def __init__(
@@ -208,12 +159,6 @@ class DerivedField:
 
 
 class YTDataContainer(abc.ABC):
-    """
-    Generic YTDataContainer container.  By itself, will attempt to
-    generate field, read fields (method defined by derived classes)
-    and deal with passing back and forth field parameters.
-    """
-
     _chunk_info = None
     _num_ghost_zones = 0
     _con_args: tuple[str, ...] = ()
@@ -226,12 +171,6 @@ class YTDataContainer(abc.ABC):
     _key_fields: list[str]
 
     def __init__(self, ds: Optional["Dataset"], field_parameters) -> None:
-        """
-        Typically this is never called directly, but only due to inheritance.
-        It associates a :class:`~yt.data_objects.static_output.Dataset` with the class,
-        sets its initial set of fields, and the remainder of the arguments
-        are passed as field_parameters.
-        """
         # ds is typically set in the new object type created in
         # Dataset._add_object_class but it can also be passed as a parameter to the
         # constructor, in which case it will override the default.
@@ -496,10 +435,6 @@ class Dataset(abc.ABC):
         *,
         axis_order: Optional[AxisOrder] = None,
     ) -> None:
-        """
-        Base class for generating new output types.  Principally consists of
-        a *filename* and a *dataset_type* which will be passed on to children.
-        """
         # We return early and do NOT initialize a second time if this file has
         # already been initialized.
         self.dataset_type = dataset_type
@@ -737,45 +672,6 @@ class Dataset(abc.ABC):
 
     @property
     def arr(self):
-        """Converts an array into a :class:`yt.units.yt_array.YTArray`
-
-        The returned YTArray will be dimensionless by default, but can be
-        cast to arbitrary units using the ``units`` keyword argument.
-
-        Parameters
-        ----------
-
-        input_array : Iterable
-            A tuple, list, or array to attach units to
-        units: String unit specification, unit symbol or astropy object
-            The units of the array. Powers must be specified using python syntax
-            (cm**3, not cm^3).
-        input_units : Deprecated in favor of 'units'
-        dtype : string or NumPy dtype object
-            The dtype of the returned array data
-
-        Examples
-        --------
-
-        >>> import yt
-        >>> import numpy as np
-        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-        >>> a = ds.arr([1, 2, 3], "cm")
-        >>> b = ds.arr([4, 5, 6], "m")
-        >>> a + b
-        YTArray([ 401.,  502.,  603.]) cm
-        >>> b + a
-        YTArray([ 4.01,  5.02,  6.03]) m
-
-        Arrays returned by this function know about the dataset's unit system
-
-        >>> a = ds.arr(np.ones(5), "code_length")
-        >>> a.in_units("Mpccm/h")
-        YTArray([ 1.00010449,  1.00010449,  1.00010449,  1.00010449,
-                 1.00010449]) Mpc
-
-        """
-
         if self._arr is not None:
             return self._arr
         self._arr = functools.partial(YTArray, registry=self.unit_registry)
@@ -785,45 +681,6 @@ class Dataset(abc.ABC):
 
     @property
     def quan(self):
-        """Converts an scalar into a :class:`yt.units.yt_array.YTQuantity`
-
-        The returned YTQuantity will be dimensionless by default, but can be
-        cast to arbitrary units using the ``units`` keyword argument.
-
-        Parameters
-        ----------
-
-        input_scalar : an integer or floating point scalar
-            The scalar to attach units to
-        units: String unit specification, unit symbol or astropy object
-            The units of the quantity. Powers must be specified using python
-            syntax (cm**3, not cm^3).
-        input_units : Deprecated in favor of 'units'
-        dtype : string or NumPy dtype object
-            The dtype of the array data.
-
-        Examples
-        --------
-
-        >>> import yt
-        >>> ds = yt.load("IsolatedGalaxy/galaxy0030/galaxy0030")
-
-        >>> a = ds.quan(1, "cm")
-        >>> b = ds.quan(2, "m")
-        >>> a + b
-        201.0 cm
-        >>> b + a
-        2.01 m
-
-        Quantities created this way automatically know about the unit system
-        of the dataset.
-
-        >>> a = ds.quan(5, "code_length")
-        >>> a.in_cgs()
-        1.543e+25 cm
-
-        """
-
         if self._quan is not None:
             return self._quan
         self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
@@ -831,14 +688,6 @@ class Dataset(abc.ABC):
 
 
 class FieldInfoContainer(UserDict):
-    """
-    This is a generic field container.  It contains a list of potential derived
-    fields, all of which know how to act on a data object and return a value.
-    This object handles converting units as well as validating the availability
-    of a given field.
-
-    """
-
     fallback = None
     known_other_fields: KnownFieldsT = ()
     known_particle_fields: KnownFieldsT = ()
@@ -890,40 +739,6 @@ class FieldInfoContainer(UserDict):
         force_override: bool = False,
         **kwargs,
     ) -> None:
-        """
-        Add a new field, along with supplemental metadata, to the list of
-        available fields.  This respects a number of arguments, all of which
-        are passed on to the constructor for
-        :class:`~yt.data_objects.api.DerivedField`.
-
-        Parameters
-        ----------
-
-        name : tuple[str, str]
-           field (or particle) type, field name
-        function : callable
-           A function handle that defines the field.  Should accept
-           arguments (field, data)
-        sampling_type: str
-           "cell" or "particle" or "local"
-        force_override: bool
-           If False (default), an error will be raised if a field of the same name already exists.
-        alias: DerivedField (optional):
-           existing field to be aliased
-        units : str
-           A plain text string encoding the unit.  Powers must be in
-           python syntax (** instead of ^). If set to "auto" the units
-           will be inferred from the return value of the field function.
-        take_log : bool
-           Describes whether the field should be logged
-        validators : list
-           A list of :class:`FieldValidator` objects
-        vector_field : bool
-           Describes the dimensionality of the field.  Currently unused.
-        display_name : str
-           A name used in the plots
-
-        """
         # Handle the case where the field has already been added.
         if not force_override and name in self:
             return
@@ -967,25 +782,6 @@ class FieldInfoContainer(UserDict):
         original_name: FieldKey,
         units: Optional[str] = None,
     ):
-        """
-        Alias one field to another field.
-
-        Parameters
-        ----------
-        alias_name : tuple[str, str]
-            The new field name.
-        original_name : tuple[str, str]
-            The field to be aliased.
-        units : str
-           A plain text string encoding the unit.  Powers must be in
-           python syntax (** instead of ^). If set to "auto" the units
-           will be inferred from the return value of the field function.
-        deprecate : tuple[str, str | None] | None
-            If this is set, then the tuple contains two string version
-            numbers: the first marking the version when the field was
-            deprecated, and the second marking when the field will be
-            removed.
-        """
         if units is None:
             # We default to CGS here, but in principle, this can be pluggable
             # as well.
