@@ -10,8 +10,7 @@ from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
-from unyt import Unit, UnitSystem
-from yt.data_objects.region_expression import RegionExpression
+from unyt import Unit
 from yt.fields.derived_field import TranslationFunc
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
@@ -226,7 +225,6 @@ class Dataset(abc.ABC):
         self.dataset_type = dataset_type
         self.conversion_factors = {}
         self.parameters = {}
-        self.region_expression = self.r = RegionExpression(self)
         self.field_units = {}
         self._determined_fields = {}
         self.units_override = units_override
@@ -275,7 +273,7 @@ class Dataset(abc.ABC):
 
         self._unit_system_name: str = unit_system
 
-        self.unit_system: UnitSystem = us
+        self.unit_system = us
         self.unit_registry.unit_system = self.unit_system
 
     def _create_unit_registry(self, unit_system):
