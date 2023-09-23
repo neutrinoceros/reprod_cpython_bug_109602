@@ -249,18 +249,6 @@ class YTDataContainer(abc.ABC):
         """
         self.field_data.clear()
 
-    def has_key(self, key):
-        """
-        Checks if a data field already exists.
-        """
-        return key in self.field_data
-
-    def keys(self):
-        return self.field_data.keys()
-
-    def _reshape_vals(self, arr):
-        return arr
-
     def __getitem__(self, key):
         """
         Returns a single field.  Will add if necessary.
