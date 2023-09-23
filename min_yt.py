@@ -463,12 +463,6 @@ class FieldInfoContainer(UserDict):
             alias=self[original_name],
         )
 
-    def __contains__(self, key):
-        if super().__contains__(key):
-            return True
-        else:
-            return False
-
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
         unavailable = []
