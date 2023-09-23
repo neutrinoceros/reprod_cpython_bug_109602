@@ -41,14 +41,11 @@ def _get_vert_fields(axi, units="code_length"):
 
 
 class CartesianCoordinateHandler:
-    name = "cartesian"
-
     def __init__(self, ds):
         self.ds = weakref.proxy(ds)
-        self.axis_order = ("x", "y", "z")
 
     def setup_fields(self, registry):
-        for axi, ax in enumerate(self.axis_order):
+        for axi, ax in enumerate("xyz"):
             f1, f2 = _get_coord_fields(axi)
             registry.add_field(
                 ("index", f"d{ax}"),
@@ -629,7 +626,7 @@ def setup_fluid_fields(registry, ftype="gas", slice_info=None):
         field_units,
         ftype="gas",
     ) -> None:
-        axis_order = registry.ds.coordinates.axis_order
+        axis_order = tuple("xyz")
 
         xn, yn, zn = ((ftype, f"{basename}_{ax}") for ax in axis_order)
 
