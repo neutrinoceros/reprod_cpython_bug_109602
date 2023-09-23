@@ -5,37 +5,31 @@ import functools
 import hashlib
 import itertools
 import os
-import sys
 import time
 import uuid
 import weakref
 from collections import UserDict, defaultdict
 from collections.abc import Callable
-from contextlib import contextmanager
 from functools import wraps
 from importlib.util import find_spec
-from io import StringIO
 from itertools import chain
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import yt.geometry.selection_routines
 import yt.utilities.logger
-from more_itertools import always_iterable
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
-from yt.config import ytcfg
 from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
-from yt.data_objects.image_array import ImageArray
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import (
     DerivedField,
     NullFunc,
     TranslationFunc,
 )
-from yt.fields.field_exceptions import NeedsConfiguration, NeedsGridType
+from yt.fields.field_exceptions import NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName, field_plugins
 from yt.fields.field_type_container import FieldTypeContainer
 from yt.frontends.stream.api import StreamHierarchy
@@ -63,7 +57,6 @@ from yt.utilities.exceptions import (
     YTDomainOverflow,
     YTFieldNotFound,
 )
-from yt.utilities.lib.quad_tree import QuadTree, merge_quadtrees
 from yt.utilities.object_registries import data_object_registry
 
 
@@ -193,11 +186,13 @@ class Communicator:
         self.comm = comm
         self._distributed = comm is not None and self.comm.size > 1
 
+
 class CommunicationSystem:
     communicators: list["Communicator"] = []
 
     def __init__(self):
         self.communicators.append(Communicator(None))
+
 
 communication_system = CommunicationSystem()
 
@@ -214,6 +209,7 @@ class ParallelAnalysisInterface:
             self.comm = comm
         self._grids = self.comm._grids
         self._distributed = self.comm._distributed
+
 
 class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
     _locked = False
@@ -310,7 +306,6 @@ class YTSelectionContainer(YTDataContainer, ParallelAnalysisInterface, abc.ABC):
         for f, v in read_fluids.items():
             self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
             self.field_data[f].convert_to_units(finfos[f].output_units)
-
 
     @property
     def max_level(self):
