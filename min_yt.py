@@ -2719,7 +2719,7 @@ class Dataset(abc.ABC):
         self.particle_unions = self.particle_unions or {}
         self.field_units = self.field_units or {}
         self._determined_fields = {}
-        self.units_override = self.__class__._sanitize_units_override(units_override)
+        self.units_override = units_override
         self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
@@ -3346,91 +3346,6 @@ class Dataset(abc.ABC):
                 "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
             )
 
-    default_units = {
-        "length_unit": "cm",
-        "time_unit": "s",
-        "mass_unit": "g",
-        "velocity_unit": "cm/s",
-        "magnetic_unit": "gauss",
-        "temperature_unit": "K",
-    }
-
-    @classmethod
-    def _sanitize_units_override(cls, units_override):
-        """
-        Convert units_override values to valid input types for unyt.
-        Throw meaningful errors early if units_override is ill-formed.
-
-        Parameters
-        ----------
-        units_override : dict
-
-            keys should be strings with format  "<dim>_unit" (e.g. "mass_unit"), and
-            need to match a key in cls.default_units
-
-            values should be mappable to unyt.unyt_quantity objects, and can be any
-            combinations of:
-                - unyt.unyt_quantity
-                - 2-long sequence (tuples, list, ...) with types (number, str)
-                  e.g. (10, "km"), (0.1, "s")
-                - number (in which case the associated is taken from cls.default_unit)
-
-
-        Raises
-        ------
-        TypeError
-            If unit_override has invalid types
-
-        ValueError
-            If provided units do not match the intended dimensionality,
-            or in case of a zero scaling factor.
-
-        """
-        uo = {}
-        if units_override is None:
-            return uo
-
-        for key in cls.default_units:
-            try:
-                val = units_override[key]
-            except KeyError:
-                continue
-
-            # Now attempt to instantiate a unyt.unyt_quantity from val ...
-            try:
-                # ... directly (valid if val is a number, or a unyt_quantity)
-                uo[key] = YTQuantity(val)
-                continue
-            except RuntimeError:
-                # note that unyt.unyt_quantity throws RuntimeError in lieu of TypeError
-                pass
-            try:
-                # ... with tuple unpacking (valid if val is a sequence)
-                uo[key] = YTQuantity(*val)
-                continue
-            except (RuntimeError, TypeError, UnitParseError):
-                pass
-            raise TypeError(
-                "units_override values should be 2-sequence (float, str), "
-                "YTQuantity objects or real numbers; "
-                f"received {val} with type {type(val)}."
-            )
-        for key, q in uo.items():
-            if q.units.is_dimensionless:
-                uo[key] = YTQuantity(q, cls.default_units[key])
-            try:
-                uo[key].to(cls.default_units[key])
-            except UnitConversionError as err:
-                raise ValueError(
-                    "Inconsistent dimensionality in units_override. "
-                    f"Received {key} = {uo[key]}"
-                ) from err
-            if uo[key].value == 0.0:
-                raise ValueError(
-                    f"Invalid 0 normalisation factor in units_override for {key}."
-                )
-        return uo
-
     def _override_code_units(self):
         if not self.units_override:
             return
@@ -3894,8 +3809,6 @@ class FieldInfoContainer(UserDict):
         self.species_names: list[FieldName] = []
         self.setup_fluid_aliases()
 
-    def setup_fluid_fields(self):
-        pass
 
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
@@ -4386,13 +4299,11 @@ class StreamFieldInfo(FieldInfoContainer):
     )
 
     def setup_fluid_fields(self):
-
         species_names = []
         for field in self.ds.stream_handler.field_units:
             units = self.ds.stream_handler.field_units[field]
             if units != "":
                 self.add_output_field(field, sampling_type="cell", units=units)
-
 
         self.species_names = sorted(species_names)
 
