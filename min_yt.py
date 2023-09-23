@@ -119,18 +119,11 @@ class YTDataContainer(abc.ABC):
     def _set_default_field_parameters(self):
         self.field_parameters = {}
         for k, v in self._default_field_parameters.items():
-            self.set_field_parameter(k, v)
+            self.field_parameters[k] = v
 
     def _set_center(self, center):
         self.center = center
-        self.set_field_parameter("center", self.center)
-
-    def set_field_parameter(self, name, val):
-        """
-        Here we set up dictionaries that get passed up and down and ultimately
-        to derived fields.
-        """
-        self.field_parameters[name] = val
+        self.field_parameters["center"] = self.center
 
     def __getitem__(self, key):
         """
@@ -205,7 +198,6 @@ class YTSelectionContainer(YTDataContainer, abc.ABC):
         if self._current_chunk is None:
             self.index._identify_base_chunk(self)
         nfields = []
-        defaultdict(list)
         for field in self._determine_fields(fields):
             # We need to create the field on the raw particle types
             # for particles types (when the field is not directly
@@ -234,8 +226,6 @@ class YTSelectionContainer(YTDataContainer, abc.ABC):
             return
         elif self._locked:
             raise GenerationInProgress(fields)
-        # Track which ones we want in the end
-        set(list(self.field_data.keys()) + fields_to_get + fields_to_generate)
         # At this point, we want to figure out *all* our dependencies.
         fields_to_get = self._identify_dependencies(fields_to_get, self._spatial)
         # We now split up into readers for the types of fields
