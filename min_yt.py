@@ -8,7 +8,6 @@ import weakref
 from collections import UserDict, defaultdict
 from collections.abc import Callable
 from itertools import chain
-from typing import Any, Optional, Union
 
 import numpy as np
 from unyt import Unit, UnitSystem
@@ -81,7 +80,7 @@ class FieldDetector(defaultdict):
     def _reshape_vals(self, arr):
         return arr
 
-    def __missing__(self, item: Union[tuple[str, str], str]):
+    def __missing__(self, item: tuple[str, str] | str):
         field = item
         finfo = self.ds._get_field_info(field)
         params, permute_params = finfo._get_needed_parameters(self)
@@ -127,7 +126,7 @@ class DerivedField:
         name: FieldKey,
         sampling_type,
         function,
-        units: Optional[Union[str, bytes, Unit]] = None,
+        units: str | (bytes | Unit) | None = None,
         vector_field=False,
         display_field=True,
         not_in_all=False,
@@ -135,7 +134,7 @@ class DerivedField:
         dimensions=None,
         ds=None,
         *,
-        alias: Optional["DerivedField"] = None,
+        alias: DerivedField | None = None,
     ):
         self.name = name
         self.display_name = display_name
@@ -240,7 +239,7 @@ class Dataset(abc.ABC):
     _index_class: type[Index]
     _particle_type_counts = None
     _proj_type = "quad_proj"
-    _determined_fields: Optional[dict[str, list[FieldKey]]] = None
+    _determined_fields: dict[str, list[FieldKey]] | None = None
 
     # the point in index space "domain_left_edge" doesn't necessarily
     # map to (0, 0, 0)
@@ -250,21 +249,19 @@ class Dataset(abc.ABC):
     def __init__(
         self,
         filename: str,
-        dataset_type: Optional[str] = None,
-        units_override: Optional[dict[str, str]] = None,
+        dataset_type: str | None = None,
+        units_override: dict[str, str] | None = None,
         # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
         unit_system="cgs",
-        default_species_fields: Optional[
-            "Any"
-        ] = None,  # Any used as a placeholder here
+        default_species_fields=None,
         *,
-        axis_order: Optional[AxisOrder] = None,
+        axis_order: AxisOrder | None = None,
     ) -> None:
         # We return early and do NOT initialize a second time if this file has
         # already been initialized.
         self.dataset_type = dataset_type
         self.conversion_factors = {}
-        self.parameters: dict[str, Any] = {}
+        self.parameters = {}
         self.region_expression = self.r = RegionExpression(self)
         self.field_units = {}
         self._determined_fields = {}
@@ -306,7 +303,7 @@ class Dataset(abc.ABC):
     def field_list(self):
         return self.index.field_list
 
-    def _setup_coordinate_handler(self, axis_order: Optional[AxisOrder]) -> None:
+    def _setup_coordinate_handler(self, axis_order: AxisOrder | None) -> None:
         self.coordinates = CartesianCoordinateHandler(self, ordering=axis_order)
 
     def _get_field_info(self, field, /):
@@ -408,7 +405,7 @@ class FieldInfoContainer(UserDict):
         kwargs.setdefault("ds", self.ds)
         self[name] = DerivedField(name, sampling_type, function, alias=alias, **kwargs)
 
-    def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
+    def load_all_plugins(self, ftype: str | None = "gas") -> None:
         loaded = []
         for n in sorted(MINIMAL_FIELD_PLUGINS):
             f = MINIMAL_FIELD_PLUGINS[n]
