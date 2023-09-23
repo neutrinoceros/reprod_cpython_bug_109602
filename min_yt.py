@@ -25,7 +25,6 @@ from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
 from yt.data_objects.static_output import _cached_datasets, _ds_store
-from yt.data_objects.unions import ParticleUnion
 from yt.fields.derived_field import (
     DerivedField,
     NullFunc,
@@ -455,7 +454,6 @@ class Dataset(abc.ABC):
     geometry: Geometry = Geometry.CARTESIAN
     coordinates = None
     storage_filename = None
-    particle_unions: Optional[dict[ParticleType, ParticleUnion]] = None
     _index_class: type[Index]
     field_units: Optional[dict[AnyFieldKey, Unit]] = None
     derived_field_list = requires_index("derived_field_list")
@@ -507,7 +505,6 @@ class Dataset(abc.ABC):
         self.conversion_factors = {}
         self.parameters: dict[str, Any] = {}
         self.region_expression = self.r = RegionExpression(self)
-        self.particle_unions = self.particle_unions or {}
         self.field_units = self.field_units or {}
         self._determined_fields = {}
         self.units_override = units_override
