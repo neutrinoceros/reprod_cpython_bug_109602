@@ -13,7 +13,6 @@ from typing import Any, Literal, Optional, Union
 import numpy as np
 from unyt import Unit, UnitSystem
 from unyt.exceptions import UnitConversionError
-from yt.arraytypes import blankRecordArray
 from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import TranslationFunc
@@ -26,7 +25,6 @@ from yt.units.dimensions import current_mks
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
 from yt.units.yt_array import YTArray
-from yt.utilities.definitions import MAXLEVEL
 from yt.utilities.exceptions import (
     YTCoordinateNotImplemented,
     YTDomainOverflow,
