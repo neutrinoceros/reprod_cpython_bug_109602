@@ -26,12 +26,6 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
 class FieldDetector(defaultdict):
-    Level = 1
-    NumberOfParticles = 1
-    _read_exception = None
-    _id_offset = 0
-    domain_id = 0
-
     def __init__(self, nd=16, ds=None, flat=False):
         self.nd = nd
         self.flat = flat
@@ -48,7 +42,7 @@ class FieldDetector(defaultdict):
 
         class fake_index:
             class fake_io:
-                _read_exception = RuntimeError
+                pass
 
             io = fake_io()
 
