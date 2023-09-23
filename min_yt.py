@@ -518,21 +518,17 @@ class FieldInfoContainer(UserDict):
         dfl = set(self.ds.derived_field_list).union(deps.keys())
         dfl = sorted(dfl)
 
-        if not hasattr(self.ds.index, "meshes"):
-            # the meshes attribute characterizes an unstructured-mesh data structure
+        # ideally this filtering should not be required
+        # and this could maybe be handled in fi.get_dependencies
+        # but it's a lot easier to do here
+        filtered_dfl = []
+        for field in dfl:
+            ftype, fname = field
+            if "vertex" in fname:
+                continue
 
-            # ideally this filtering should not be required
-            # and this could maybe be handled in fi.get_dependencies
-            # but it's a lot easier to do here
-
-            filtered_dfl = []
-            for field in dfl:
-                ftype, fname = field
-                if "vertex" in fname:
-                    continue
-
-                filtered_dfl.append(field)
-            dfl = filtered_dfl
+            filtered_dfl.append(field)
+        dfl = filtered_dfl
 
         self.ds.derived_field_list = dfl
         return deps, unavailable
