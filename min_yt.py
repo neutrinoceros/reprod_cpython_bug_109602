@@ -3296,9 +3296,6 @@ class Dataset(abc.ABC):
         return new_unit
 
     def set_code_units(self):
-        # here we override units, if overrides have been provided.
-        self._override_code_units()
-
         # set attributes like ds.length_unit
         self._set_code_unit_attributes()
 
@@ -3345,13 +3342,6 @@ class Dataset(abc.ABC):
             self.unit_registry.add(
                 "unitary", float(DW.max() * DW.units.base_value), DW.units.dimensions
             )
-
-    def _override_code_units(self):
-        if not self.units_override:
-            return
-
-        for ukey, val in self.units_override.items():
-            setattr(self, ukey, self.quan(val))
 
     _units = None
     _unit_system_id = None
