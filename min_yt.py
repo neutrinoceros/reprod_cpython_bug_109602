@@ -183,7 +183,6 @@ class Dataset(abc.ABC):
         self._create_unit_registry(unit_system)
 
         self._parse_parameter_file()
-        self.set_units()
         self._assign_unit_system(unit_system)
         self._setup_coordinate_handler(axis_order)
         self._set_derived_attrs()
@@ -284,17 +283,6 @@ class Dataset(abc.ABC):
         self.unit_registry.add("h", 1.0, dimensions.dimensionless, r"h")
         # cosmological scale factor
         self.unit_registry.add("a", 1.0, dimensions.dimensionless)
-
-    def set_units(self):
-        """
-        Creates the unit registry for this dataset.
-
-        """
-        self.set_code_units()
-
-    def set_code_units(self):
-        # set attributes like ds.length_unit
-        self._set_code_unit_attributes()
 
     _arr = None
 
