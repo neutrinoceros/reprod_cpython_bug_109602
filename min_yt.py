@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import abc
 import contextlib
 import functools
 import os
@@ -11,259 +10,12 @@ from itertools import chain
 
 import numpy as np
 from unyt import Unit
-from yt.config import ytcfg
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
-from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
-from yt.utilities.logger import ytLogger as mylog
-from yt.utilities.on_demand_imports import _h5py as h5py
-from yt.utilities.parallel_tools.parallel_analysis_interface import (
-    ParallelAnalysisInterface,
-    parallel_root_only,
-)
-
-
-class Index(abc.ABC):
-    """The base index class"""
-
-    _unsupported_objects: tuple[str, ...] = ()
-    _index_properties: tuple[str, ...] = ()
-
-    def __init__(self, ds, dataset_type):
-        self.dataset = weakref.proxy(ds)
-        self.ds = self.dataset
-
-        self._initialize_state_variables()
-
-        mylog.debug("Initializing data storage.")
-        self._initialize_data_storage()
-
-        mylog.debug("Setting up domain geometry.")
-        self._setup_geometry()
-
-        mylog.debug("Initializing data grid data IO")
-        self._setup_data_io()
-
-        # Note that this falls under the "geometry" object since it's
-        # potentially quite expensive, and should be done with the indexing.
-        mylog.debug("Detecting fields.")
-        self._detect_output_fields()
-
-    @abc.abstractmethod
-    def _detect_output_fields(self):
-        pass
-
-    def _icoords_to_fcoords(
-        self,
-        icoords: np.ndarray,
-        ires: np.ndarray,
-        axes: tuple[int, ...] | None = None,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        # What's the use of raising NotImplementedError for this, when it's an
-        # abstract base class?  Well, only *some* of the subclasses have it --
-        # and for those that *don't*, we should not be calling it -- and since
-        # it's a semi-private method, it shouldn't be called outside of yt
-        # machinery.  So we shouldn't ever get here!
-        raise NotImplementedError
-
-    def _initialize_state_variables(self):
-        self._parallel_locking = False
-        self._data_file = None
-        self._data_mode = None
-        self.num_grids = None
-
-    def _initialize_data_storage(self):
-        if not ytcfg.get("yt", "serialize"):
-            return
-        fn = self.ds.storage_filename
-        if fn is None:
-            if os.path.isfile(
-                os.path.join(self.directory, f"{self.ds.unique_identifier}.yt")
-            ):
-                fn = os.path.join(self.directory, f"{self.ds.unique_identifier}.yt")
-            else:
-                fn = os.path.join(self.directory, f"{self.dataset.basename}.yt")
-        dir_to_check = os.path.dirname(fn)
-        if dir_to_check == "":
-            dir_to_check = "."
-        # We have four options:
-        #    Writeable, does not exist      : create, open as append
-        #    Writeable, does exist          : open as append
-        #    Not writeable, does not exist  : do not attempt to open
-        #    Not writeable, does exist      : open as read-only
-        exists = os.path.isfile(fn)
-        if not exists:
-            writeable = os.access(dir_to_check, os.W_OK)
-        else:
-            writeable = os.access(fn, os.W_OK)
-        writeable = writeable and not ytcfg.get("yt", "only_deserialize")
-        # We now have our conditional stuff
-        self.comm.barrier()
-        if not writeable and not exists:
-            return
-        if writeable:
-            try:
-                if not exists:
-                    self.__create_data_file(fn)
-                self._data_mode = "a"
-            except OSError:
-                self._data_mode = None
-                return
-        else:
-            self._data_mode = "r"
-
-        self.__data_filename = fn
-        self._data_file = h5py.File(fn, mode=self._data_mode)
-
-    def __create_data_file(self, fn):
-        # Note that this used to be parallel_root_only; it no longer is,
-        # because we have better logic to decide who owns the file.
-        f = h5py.File(fn, mode="a")
-        f.close()
-
-    def _setup_data_io(self):
-        if getattr(self, "io", None) is not None:
-            return
-        self.io = io_registry[self.dataset_type](self.dataset)
-
-    @parallel_root_only
-    def save_data(
-        self, array, node, name, set_attr=None, force=False, passthrough=False
-    ):
-        """
-        Arbitrary numpy data will be saved to the region in the datafile
-        described by *node* and *name*.  If data file does not exist, it throws
-        no error and simply does not save.
-        """
-
-        if self._data_mode != "a":
-            return
-        try:
-            node_loc = self._data_file[node]
-            if name in node_loc and force:
-                mylog.info("Overwriting node %s/%s", node, name)
-                del self._data_file[node][name]
-            elif name in node_loc and passthrough:
-                return
-        except Exception:
-            pass
-        myGroup = self._data_file["/"]
-        for q in node.split("/"):
-            if q:
-                myGroup = myGroup.require_group(q)
-        arr = myGroup.create_dataset(name, data=array)
-        if set_attr is not None:
-            for i, j in set_attr.items():
-                arr.attrs[i] = j
-        self._data_file.flush()
-
-    def _reload_data_file(self, *args, **kwargs):
-        if self._data_file is None:
-            return
-        self._data_file.close()
-        del self._data_file
-        self._data_file = h5py.File(self.__data_filename, mode=self._data_mode)
-
-    def get_data(self, node, name):
-        """
-        Return the dataset with a given *name* located at *node* in the
-        datafile.
-        """
-        if self._data_file is None:
-            return None
-        if node[0] != "/":
-            node = f"/{node}"
-
-        myGroup = self._data_file["/"]
-        for group in node.split("/"):
-            if group:
-                if group not in myGroup:
-                    return None
-                myGroup = myGroup[group]
-        if name not in myGroup:
-            return None
-
-        full_name = f"{node}/{name}"
-        try:
-            return self._data_file[full_name][:]
-        except TypeError:
-            return self._data_file[full_name]
-
-    def _get_particle_type_counts(self):
-        # this is implemented by subclasses
-        raise NotImplementedError
-
-    def _close_data_file(self):
-        if self._data_file:
-            self._data_file.close()
-            del self._data_file
-            self._data_file = None
-
-    def _split_fields(self, fields):
-        # This will split fields into either generated or read fields
-        fields_to_read, fields_to_generate = [], []
-        for ftype, fname in fields:
-            if fname in self.field_list or (ftype, fname) in self.field_list:
-                fields_to_read.append((ftype, fname))
-            elif (
-                fname in self.ds.derived_field_list
-                or (ftype, fname) in self.ds.derived_field_list
-            ):
-                fields_to_generate.append((ftype, fname))
-            else:
-                raise YTFieldNotFound((ftype, fname), self.ds)
-        return fields_to_read, fields_to_generate
-
-    def _read_particle_fields(self, fields, dobj, chunk=None):
-        if len(fields) == 0:
-            return {}, []
-        fields_to_read, fields_to_generate = self._split_fields(fields)
-        if len(fields_to_read) == 0:
-            return {}, fields_to_generate
-        selector = dobj.selector
-        if chunk is None:
-            self._identify_base_chunk(dobj)
-        chunks = self._chunk_io(dobj, cache=False)
-        fields_to_return = self.io._read_particle_selection(
-            chunks, selector, fields_to_read
-        )
-        return fields_to_return, fields_to_generate
-
-    def _read_fluid_fields(self, fields, dobj, chunk=None):
-        if len(fields) == 0:
-            return {}, []
-        fields_to_read, fields_to_generate = self._split_fields(fields)
-        if len(fields_to_read) == 0:
-            return {}, fields_to_generate
-        selector = dobj.selector
-        if chunk is None:
-            self._identify_base_chunk(dobj)
-            chunk_size = dobj.size
-        else:
-            chunk_size = chunk.data_size
-        fields_to_return = self.io._read_fluid_selection(
-            self._chunk_io(dobj), selector, fields_to_read, chunk_size
-        )
-        return fields_to_return, fields_to_generate
-
-    def _chunk(self, dobj, chunking_style, ngz=0, **kwargs):
-        # A chunk is either None or (grids, size)
-        if dobj._current_chunk is None:
-            self._identify_base_chunk(dobj)
-        if ngz != 0 and chunking_style != "spatial":
-            raise NotImplementedError
-        if chunking_style == "all":
-            return self._chunk_all(dobj, **kwargs)
-        elif chunking_style == "spatial":
-            return self._chunk_spatial(dobj, ngz, **kwargs)
-        elif chunking_style == "io":
-            return self._chunk_io(dobj, **kwargs)
-        else:
-            raise NotImplementedError
 
 
 class CartesianCoordinateHandler:
@@ -338,23 +90,9 @@ class FieldDetector(defaultdict):
             return self[_item]
 
     @property
-    def fcoords(self):
-        fc = np.array(
-            np.mgrid[0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j]
-        )
-        fc = fc.transpose()
-        return self.ds.arr(fc, units="code_length")
-
-    @property
     def fcoords_vertex(self):
         fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
         return self.ds.arr(fc, units="code_length")
-
-    @property
-    def fwidth(self):
-        fw = np.ones((self.nd**3, 3), dtype="float64") / self.nd
-        fw.shape = (self.nd, self.nd, self.nd, 3)
-        return self.ds.arr(fw, units="code_length")
 
 
 class DerivedField:
@@ -545,28 +283,14 @@ class FieldInfoContainer(UserDict):
 
         # now populate the derived field list with results
         # this violates isolation principles and should be refactored
-        dfl = set(self.ds.derived_field_list).union(deps.keys())
-        dfl = sorted(dfl)
+        set(self.ds.derived_field_list).union(deps.keys())
 
-        # ideally this filtering should not be required
-        # and this could maybe be handled in fi.get_dependencies
-        # but it's a lot easier to do here
-        filtered_dfl = []
-        for field in dfl:
-            ftype, fname = field
-            if "vertex" in fname:
-                continue
-
-            filtered_dfl.append(field)
-        dfl = filtered_dfl
-
-        self.ds.derived_field_list = dfl
+        self.ds.derived_field_list = []
         return deps, unavailable
 
 
-class GridIndex(Index, abc.ABC):
-    """The index class for patch and block AMR datasets."""
-
+class StreamHierarchy:
+    grid = object
     float_type = "float64"
     _preload_implemented = False
     _index_properties = (
@@ -577,11 +301,20 @@ class GridIndex(Index, abc.ABC):
         "grid_dimensions",
     )
 
-    def _setup_geometry(self):
+    def __init__(self, ds, dataset_type=None):
+        self.dataset_type = dataset_type
+        self.float_type = "float64"
+        self.dataset = weakref.proxy(ds)  # for _obtain_enzo
+        self.stream_handler = ds.stream_handler
+        self.float_type = "float64"
+        self.directory = os.getcwd()
+        self.dataset = weakref.proxy(ds)
+        self.ds = self.dataset
+        self._parallel_locking = False
+        self._data_file = None
+        self._data_mode = None
+        self.num_grids = None
         self._count_grids()
-        self._initialize_grid_arrays()
-
-    def _initialize_grid_arrays(self):
         self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
         self.grid_left_edge = self.ds.arr(
             np.zeros((self.num_grids, 3), self.float_type), "code_length"
@@ -592,25 +325,11 @@ class GridIndex(Index, abc.ABC):
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
 
-
-class StreamHierarchy(GridIndex):
-    grid = object
-
-    def __init__(self, ds, dataset_type=None):
-        self.dataset_type = dataset_type
-        self.float_type = "float64"
-        self.dataset = weakref.proxy(ds)  # for _obtain_enzo
-        self.stream_handler = ds.stream_handler
-        self.float_type = "float64"
-        self.directory = os.getcwd()
-        GridIndex.__init__(self, ds, dataset_type)
+        self._setup_data_io()
+        self._detect_output_fields()
 
     def _count_grids(self):
         self.num_grids = self.stream_handler.num_grids
-
-    def _initialize_grid_arrays(self):
-        GridIndex._initialize_grid_arrays(self)
-        self.grid_procs = np.zeros((self.num_grids, 1), "int32")
 
     def _detect_output_fields(self):
         # NOTE: Because particle unions add to the actual field list, without
