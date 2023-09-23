@@ -206,13 +206,13 @@ class StreamHandler:
 
 class Dataset(abc.ABC):
     default_fluid_type = "gas"
-    fluid_types: tuple[FieldType, ...] = ("gas", "deposit", "index")
+    fluid_types = ("gas", "deposit", "index")
     coordinates = None
     storage_filename = None
     _index_class: type[Index]
     _particle_type_counts = None
     _proj_type = "quad_proj"
-    _determined_fields: dict[str, list[FieldKey]] | None = None
+    _determined_fields = None
 
     # the point in index space "domain_left_edge" doesn't necessarily
     # map to (0, 0, 0)
@@ -223,7 +223,6 @@ class Dataset(abc.ABC):
         self,
         filename: str,
         dataset_type: str | None = None,
-        units_override: dict[str, str] | None = None,
         default_species_fields=None,
     ) -> None:
         # We return early and do NOT initialize a second time if this file has
@@ -233,7 +232,6 @@ class Dataset(abc.ABC):
         self.parameters = {}
         self.field_units = {}
         self._determined_fields = {}
-        self.units_override = units_override
         self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
