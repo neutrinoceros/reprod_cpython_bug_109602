@@ -366,25 +366,18 @@ class Dataset:
         self._determined_fields = {}
 
         self.unit_registry = UnitRegistry(unit_system="cgs")
-        # 1 cm = 0.01 m
         self.unit_registry.add("code_length", 0.01, dimensions.length)
-        # 1 g = 0.001 kg
         self.unit_registry.add("code_mass", 0.001, dimensions.mass)
-        # 1 g/cm**3 = 1000 kg/m**3
         self.unit_registry.add("code_density", 1000.0, dimensions.density)
-        # 1 erg/g = 1.0e-4 J/kg
         self.unit_registry.add(
             "code_specific_energy", 1.0e-4, dimensions.energy / dimensions.mass
         )
-        # 1 s = 1 s
         self.unit_registry.add("code_time", 1.0, dimensions.time)
-        # 1 K = 1 K
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
 
         self.domain_left_edge = stream_handler.domain_left_edge.copy()
         self.domain_right_edge = stream_handler.domain_right_edge.copy()
         self.domain_dimensions = stream_handler.domain_dimensions
-        self.current_time = stream_handler.simulation_time
 
         self.coordinates = CartesianCoordinateHandler(self)
         self.arr = functools.partial(YTArray, registry=self.unit_registry)
