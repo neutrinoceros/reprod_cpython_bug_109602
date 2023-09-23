@@ -396,12 +396,6 @@ class Dataset:
         self._periodicity = (True, True, True)
         self.domain_dimensions = stream_handler.domain_dimensions
         self.current_time = stream_handler.simulation_time
-        self.gamma = 5.0 / 3.0
-        self.current_redshift = 0.0
-        self.omega_lambda = 0.0
-        self.omega_matter = 0.0
-        self.hubble_constant = 0.0
-        self.cosmological_simulation = 0
 
         self.unit_system = unit_system_registry["cgs"]
         self.unit_registry.unit_system = self.unit_system
