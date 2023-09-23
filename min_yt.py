@@ -127,7 +127,6 @@ class DerivedField:
         sampling_type,
         function,
         units=None,
-        vector_field=False,
         display_field=True,
         not_in_all=False,
         display_name=None,
@@ -140,17 +139,11 @@ class DerivedField:
         self.not_in_all = not_in_all
         self.display_field = display_field
         self.sampling_type = sampling_type
-        self.vector_field = vector_field
         self.ds = ds
 
         self._function = function
         self.validators = []
-
-        # handle units
-        if isinstance(units, str):
-            self.units = units
-        else:
-            self.units = str(units)
+        self.units = str(units)
 
         if alias is None:
             self._shared_aliases_list = [self]
