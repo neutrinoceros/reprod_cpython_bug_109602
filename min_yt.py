@@ -17,7 +17,7 @@ from yt.fields.derived_field import TranslationFunc
 from yt.fields.field_detector import FieldDetector
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import YTQuantity
+from yt.units import YTQuantity, dimensions
 from yt.units.dimensions import current_mks
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
@@ -248,15 +248,6 @@ class Dataset(abc.ABC):
         self.unit_registry.unit_system = self.unit_system
 
     def _create_unit_registry(self, unit_system):
-        from yt.units import dimensions
-
-        # yt assumes a CGS unit system by default (for back compat reasons).
-        # Since unyt is MKS by default we specify the MKS values of the base
-        # units in the CGS system. So, for length, 1 cm = .01 m. And so on.
-        # Note that the values associated with the code units here will be
-        # modified once we actually determine what the code units are from
-        # the dataset
-        # NOTE that magnetic fields are not done here yet, see set_code_units
         self.unit_registry = UnitRegistry(unit_system=unit_system)
         # 1 cm = 0.01 m
         self.unit_registry.add("code_length", 0.01, dimensions.length)
@@ -272,16 +263,6 @@ class Dataset(abc.ABC):
         self.unit_registry.add("code_time", 1.0, dimensions.time)
         # 1 K = 1 K
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
-        # 1 dyn/cm**2 = 0.1 N/m**2
-        self.unit_registry.add("code_pressure", 0.1, dimensions.pressure)
-        # 1 cm/s = 0.01 m/s
-        self.unit_registry.add("code_velocity", 0.01, dimensions.velocity)
-        # metallicity
-        self.unit_registry.add("code_metallicity", 1.0, dimensions.dimensionless)
-        # dimensionless hubble parameter
-        self.unit_registry.add("h", 1.0, dimensions.dimensionless, r"h")
-        # cosmological scale factor
-        self.unit_registry.add("a", 1.0, dimensions.dimensionless)
 
     _arr = None
 
