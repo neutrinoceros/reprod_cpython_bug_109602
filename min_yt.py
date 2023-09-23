@@ -396,10 +396,7 @@ class Dataset:
 
         self.coordinates = CartesianCoordinateHandler(self)
 
-        self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
-        self.domain_width = self.domain_right_edge - self.domain_left_edge
-        self.current_time = self.quan(self.current_time, "code_time")
-        for attr in ("center", "width", "left_edge", "right_edge"):
+        for attr in ("left_edge", "right_edge"):
             n = f"domain_{attr}"
             v = getattr(self, n)
             # Note that we don't add on _ipython_display_ here because
