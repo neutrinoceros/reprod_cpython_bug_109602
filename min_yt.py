@@ -322,38 +322,6 @@ class YTRegion(YTSelectionContainer3D):
         self.right_edge = self.ds.arr(right_edge.copy(), dtype="float64")
 
 
-class MutableAttribute:
-    """A descriptor for mutable data"""
-
-    def __init__(self, display_array=False):
-        self.data = weakref.WeakKeyDictionary()
-        # We can assume that ipywidgets will not be *added* to the system
-        # during the course of execution, and if it is, we will not wrap the
-        # array.
-        if display_array and find_spec("ipywidgets") is not None:
-            self.display_array = True
-        else:
-            self.display_array = False
-
-    def __get__(self, instance, owner):
-        ret = self.data.get(instance, None)
-        try:
-            ret = ret.copy()
-        except AttributeError:
-            pass
-        if self.display_array:
-            try:
-                ret._ipython_display_ = functools.partial(_wrap_display_ytarray, ret)
-            # This will error out if the items have yet to be turned into
-            # YTArrays, in which case we just let it go.
-            except AttributeError:
-                pass
-        return ret
-
-    def __set__(self, instance, value):
-        self.data[instance] = value
-
-
 def requires_index(attr_name):
     @property
     def ireq(self):
@@ -435,19 +403,11 @@ class Dataset(abc.ABC):
     _determined_fields: Optional[dict[str, list[FieldKey]]] = None
     fields_detected = False
 
-    # these are set in self._parse_parameter_file()
-    domain_left_edge = MutableAttribute(True)
-    domain_right_edge = MutableAttribute(True)
-    domain_dimensions = MutableAttribute(True)
     # the point in index space "domain_left_edge" doesn't necessarily
     # map to (0, 0, 0)
     domain_offset = np.zeros(3, dtype="int64")
-    _periodicity = MutableAttribute()
     _force_periodicity = False
 
-    # these are set in self._set_derived_attrs()
-    domain_width = MutableAttribute(True)
-    domain_center = MutableAttribute(True)
 
     def __init__(
         self,
