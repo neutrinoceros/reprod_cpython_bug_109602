@@ -16,7 +16,7 @@ from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
 from yt.units.unit_registry import UnitRegistry  # type: ignore
-from yt.units.unit_systems import create_code_unit_system, unit_system_registry
+from yt.units.unit_systems import unit_system_registry
 from yt.units.yt_array import YTArray, YTQuantity
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
@@ -224,8 +224,6 @@ class Dataset(abc.ABC):
         filename: str,
         dataset_type: str | None = None,
         units_override: dict[str, str] | None = None,
-        # valid unit_system values include all keys from unyt.unit_systems.unit_systems_registry + "code"
-        unit_system="cgs",
         default_species_fields=None,
     ) -> None:
         # We return early and do NOT initialize a second time if this file has
@@ -241,10 +239,13 @@ class Dataset(abc.ABC):
         self._input_filename: str = os.fspath(filename)
 
         self.no_cgs_equiv_length = False
-        self._create_unit_registry(unit_system)
+        self._create_unit_registry("cgs")
 
         self._parse_parameter_file()
-        self._assign_unit_system(unit_system)
+        self._unit_system_name = "cgs"
+        self.unit_system = unit_system_registry["cgs"]
+        self.unit_registry.unit_system = self.unit_system
+
         self.coordinates = CartesianCoordinateHandler(self)
         self._set_derived_attrs()
         self.object_types = []
@@ -269,20 +270,6 @@ class Dataset(abc.ABC):
             return self.field_info[ftype, fname]
         else:
             raise YTFieldNotFound(field, ds=self)
-
-    def _assign_unit_system(self, unit_system) -> None:
-        # we need to determine if the requested unit system
-        # is mks-like: i.e., it has a current with the same
-        # dimensions as amperes.
-        us = unit_system_registry[str(unit_system).lower()]
-
-        us = create_code_unit_system(self.unit_registry, current_mks_unit=None)
-        us = unit_system_registry[str(unit_system).lower()]
-
-        self._unit_system_name: str = unit_system
-
-        self.unit_system = us
-        self.unit_registry.unit_system = self.unit_system
 
     def _create_unit_registry(self, unit_system):
         self.unit_registry = UnitRegistry(unit_system=unit_system)
@@ -503,18 +490,11 @@ class StreamFieldInfo(FieldInfoContainer):
 
 
 class MinimalStreamDataset(Dataset):
-    _dataset_type = "stream"
-
     def __init__(self, *, stream_handler):
         self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
         self.filename = self.stream_handler.name
-        Dataset.__init__(
-            self,
-            filename="InMemoryParameterFile_1234567890",
-            dataset_type=self._dataset_type,
-            unit_system="cgs",
-        )
+        super().__init__(filename="1234567890", dataset_type="stream")
 
     def _parse_parameter_file(self):
         self.domain_left_edge = self.stream_handler.domain_left_edge.copy()
