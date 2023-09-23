@@ -3,10 +3,8 @@ from __future__ import annotations
 import abc
 import contextlib
 import functools
-import inspect
 import itertools
 import os
-import re
 import time
 import uuid
 import weakref
@@ -17,11 +15,9 @@ from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import yt.geometry.selection_routines
-import yt.units.dimensions as ytdims
 from more_itertools import always_iterable
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
-from yt._maintenance.deprecation import issue_deprecation_warning
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
@@ -50,7 +46,6 @@ from yt.utilities.exceptions import (
 )
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 from yt.utilities.object_registries import data_object_registry
-from yt.visualization._commons import _get_units_label
 
 
 class DerivedField:
@@ -169,13 +164,6 @@ class DerivedField:
 
 
     def check_available(self, data):
-        """
-        This raises an exception of the appropriate type if the set of
-        validation mechanisms are not met, and otherwise returns True.
-        """
-        for validator in self.validators:
-            validator(data)
-        # If we don't get an exception, we're good to go
         return True
 
     def get_dependencies(self, *args, **kwargs):
@@ -187,17 +175,7 @@ class DerivedField:
         return e
 
     def _get_needed_parameters(self, fd):
-        params = []
-        values = []
-        permute_params = {}
-        vals = [v for v in self.validators if isinstance(v, ValidateParameter)]
-        for val in vals:
-            if val.parameter_values is not None:
-                permute_params.update(val.parameter_values)
-            else:
-                params.extend(val.parameters)
-                values.extend([fd.get_field_parameter(fp) for fp in val.parameters])
-        return dict(zip(params, values)), permute_params
+        return {}, {}
 
     _unit_registry = None
 
