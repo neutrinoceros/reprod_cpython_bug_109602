@@ -17,7 +17,7 @@ from yt.fields.derived_field import TranslationFunc
 from yt.fields.field_detector import FieldDetector
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.units import YTQuantity, dimensions
+from yt.units import YTQuantity
 from yt.units.dimensions import current_mks
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
@@ -228,7 +228,6 @@ class Dataset(abc.ABC):
 
         raise YTFieldNotFound(field, ds=self)
 
-
     def _assign_unit_system(self, unit_system) -> None:
         # we need to determine if the requested unit system
         # is mks-like: i.e., it has a current with the same
@@ -297,8 +296,6 @@ class Dataset(abc.ABC):
 
     @property
     def quan(self):
-        if self._quan is not None:
-            return self._quan
         self._quan = functools.partial(YTQuantity, registry=self.unit_registry)
         return self._quan
 
@@ -515,28 +512,6 @@ class MinimalStreamDataset(Dataset):
         self.omega_matter = 0.0
         self.hubble_constant = 0.0
         self.cosmological_simulation = 0
-
-    def _set_code_unit_attributes(self):
-        base_units = self.stream_handler.code_units
-        attrs = (
-            "length_unit",
-            "mass_unit",
-            "time_unit",
-            "velocity_unit",
-            "magnetic_unit",
-        )
-        for unit, attr in zip(base_units, attrs):
-            if unit == "code_magnetic":
-                # If no magnetic unit was explicitly specified
-                # we skip it now and take care of it at the bottom
-                continue
-            else:
-                uq = self.quan(1.0, unit)
-            setattr(self, attr, uq)
-        if not hasattr(self, "magnetic_unit"):
-            self.magnetic_unit = np.sqrt(
-                4 * np.pi * self.mass_unit / (self.time_unit**2 * self.length_unit)
-            )
 
 
 def load_uniform_grid(
