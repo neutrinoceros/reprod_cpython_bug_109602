@@ -104,14 +104,6 @@ from yt.utilities.parallel_tools.parallel_analysis_interface import (
 from yt.utilities.parameter_file_storage import NoParameterShelf
 
 
-def sanitize_weight_field(weight):
-    if weight is None:
-        weight_field = ("index", "ones")
-    else:
-        weight_field = weight
-    return weight_field
-
-
 class YTDataContainer(abc.ABC):
     """
     Generic YTDataContainer container.  By itself, will attempt to
@@ -141,24 +133,12 @@ class YTDataContainer(abc.ABC):
         # Dataset._add_object_class but it can also be passed as a parameter to the
         # constructor, in which case it will override the default.
         # This code ensures it is never not set.
-
-        self.ds: "Dataset"
-        if ds is not None:
-            self.ds = ds
-        else:
-            if not hasattr(self, "ds"):
-                raise RuntimeError(
-                    "Error: ds must be set either through class type "
-                    "or parameter to the constructor"
-                )
-
+        self.ds = ds
         self._current_fluid_type = self.ds.default_fluid_type
         self.ds.objects.append(weakref.proxy(self))
         self.field_data = YTFieldData()
-        if self.ds.unit_system.has_current_mks:
-            mag_unit = "T"
-        else:
-            mag_unit = "G"
+
+        mag_unit = "G"
         self._default_field_parameters = {
             "center": self.ds.arr(np.zeros(3, dtype="float64"), "cm"),
             "bulk_velocity": self.ds.arr(np.zeros(3, dtype="float64"), "cm/s"),
@@ -168,8 +148,6 @@ class YTDataContainer(abc.ABC):
         if field_parameters is None:
             field_parameters = {}
         self._set_default_field_parameters()
-        for key, val in field_parameters.items():
-            self.set_field_parameter(key, val)
 
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
@@ -190,35 +168,10 @@ class YTDataContainer(abc.ABC):
         for k, v in self._default_field_parameters.items():
             self.set_field_parameter(k, v)
 
-    def _is_default_field_parameter(self, parameter):
-        if parameter not in self._default_field_parameters:
-            return False
-        return (
-            self._default_field_parameters[parameter]
-            is self.field_parameters[parameter]
-        )
-
-    def apply_units(self, arr, units):
-        try:
-            arr.units.registry = self.ds.unit_registry
-            return arr.to(units)
-        except AttributeError:
-            return self.ds.arr(arr, units=units)
-
-    def _first_matching_field(self, field: FieldName) -> FieldKey:
-        for ftype, fname in self.ds.derived_field_list:
-            if fname == field:
-                return (ftype, fname)
-
-        raise YTFieldNotFound(field, self.ds)
 
     def _set_center(self, center):
-        if center is None:
-            self.center = None
-            return
-        else:
-            self.center = center
-            self.set_field_parameter("center", self.center)
+        self.center = center
+        self.set_field_parameter("center", self.center)
 
     def set_field_parameter(self, name, val):
         """
