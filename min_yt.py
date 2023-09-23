@@ -33,11 +33,7 @@ def TranslationFunc(field_name):
 class FieldDetector(defaultdict):
     def __init__(self, nd=16, ds=None):
         self.nd = nd
-        self.shape = tuple([nd, nd, nd])
-        self.size = np.prod([nd, nd, nd])
-        self.dds = np.ones(3, "float64")
         self.field_parameters = {}
-
         self.ds = ds
 
         class fake_index:
@@ -49,10 +45,9 @@ class FieldDetector(defaultdict):
         self.index = fake_index()
         self.requested = []
         self.requested_parameters = []
-        defaultdict.__init__(
-            self,
+        super().__init__(
             lambda: np.ones((nd, nd, nd), dtype="float64")
-            + 1e-4 * np.random.random((nd, nd, nd)),
+            + 1e-4 * np.random.random((nd, nd, nd))
         )
 
     def _reshape_vals(self, arr):
