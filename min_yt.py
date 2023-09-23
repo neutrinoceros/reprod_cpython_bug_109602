@@ -388,7 +388,7 @@ class StreamFieldInfo(FieldInfoContainer):
         self.species_names = sorted(species_names)
 
 
-class MinimalStreamDataset:
+class Dataset:
     default_fluid_type = "gas"
     fluid_types = ("gas", "deposit", "index")
     coordinates = None
@@ -556,7 +556,7 @@ def load_uniform_grid(
     handler.simulation_time = 1.0
     handler.cosmology_simulation = 0
 
-    return MinimalStreamDataset(stream_handler=handler)
+    return Dataset(stream_handler=handler)
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
