@@ -22,12 +22,10 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 def _get_coord_fields(axi, units="code_length"):
     def _dds(field, data):
-        rv = data.ds.arr(data.fwidth[..., axi].copy(), units)
-        return data._reshape_vals(rv)
+        return data.ds.arr(data.fwidth[..., axi].copy(), units)
 
     def _coords(field, data):
-        rv = data.ds.arr(data.fcoords[..., axi].copy(), units)
-        return data._reshape_vals(rv)
+        return data.ds.arr(data.fcoords[..., axi].copy(), units)
 
     return _dds, _coords
 
@@ -139,9 +137,6 @@ class FieldDetector(defaultdict):
             lambda: np.ones((nd, nd, nd), dtype="float64")
             + 1e-4 * np.random.random((nd, nd, nd))
         )
-
-    def _reshape_vals(self, arr):
-        return arr
 
     def __missing__(self, item: tuple[str, str] | str):
         field = item
