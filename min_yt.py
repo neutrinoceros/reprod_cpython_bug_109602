@@ -3,7 +3,6 @@ from __future__ import annotations
 import abc
 import contextlib
 import functools
-import itertools
 import os
 import time
 import uuid
@@ -14,12 +13,10 @@ from itertools import chain
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
-import yt.geometry.selection_routines
 from more_itertools import always_iterable
 from unyt import Unit, UnitSystem
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
-from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import NullFunc, TranslationFunc
 from yt.fields.field_detector import FieldDetector
@@ -29,7 +26,7 @@ from yt.fields.field_exceptions import (
 )
 from yt.fields.field_plugin_registry import FunctionName
 from yt.frontends.stream.api import StreamHierarchy
-from yt.funcs import iter_fields, validate_field_key
+from yt.funcs import validate_field_key
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import dimensions
@@ -156,204 +153,6 @@ class DerivedField:
             if field_name not in original_fields:
                 del data[field_name]
         return dd
-
-
-class YTDataContainer(abc.ABC):
-    _chunk_info = None
-    _num_ghost_zones = 0
-    _con_args: tuple[str, ...] = ()
-    _skip_add = False
-    _container_fields: tuple[AnyFieldKey, ...] = ()
-    _tds_attrs: tuple[str, ...] = ()
-    _tds_fields: tuple[str, ...] = ()
-    _field_cache = None
-    _index = None
-    _key_fields: list[str]
-
-    def __init__(self, ds: Optional["Dataset"], field_parameters) -> None:
-        # ds is typically set in the new object type created in
-        # Dataset._add_object_class but it can also be passed as a parameter to the
-        # constructor, in which case it will override the default.
-        # This code ensures it is never not set.
-        self.ds = ds
-        self._current_fluid_type = self.ds.default_fluid_type
-        self.ds.objects.append(weakref.proxy(self))
-        self.field_data = YTFieldData()
-
-        mag_unit = "G"
-        self._default_field_parameters = {
-            "center": self.ds.arr(np.zeros(3, dtype="float64"), "cm"),
-            "bulk_velocity": self.ds.arr(np.zeros(3, dtype="float64"), "cm/s"),
-            "bulk_magnetic_field": self.ds.arr(np.zeros(3, dtype="float64"), mag_unit),
-            "normal": self.ds.arr([0.0, 0.0, 1.0], ""),
-        }
-        if field_parameters is None:
-            field_parameters = {}
-        self._set_default_field_parameters()
-
-    def __init_subclass__(cls, *args, **kwargs):
-        super().__init_subclass__(*args, **kwargs)
-        if hasattr(cls, "_type_name") and not cls._skip_add:
-            name = getattr(cls, "_override_selector_name", cls._type_name)
-            data_object_registry[name] = cls
-
-    @property
-    def index(self):
-        if self._index is not None:
-            return self._index
-        self._index = self.ds.index
-        return self._index
-
-    def _set_default_field_parameters(self):
-        self.field_parameters = {}
-        for k, v in self._default_field_parameters.items():
-            self.field_parameters[k] = v
-
-    def _set_center(self, center):
-        self.center = center
-        self.field_parameters["center"] = self.center
-
-    def __getitem__(self, key):
-        """
-        Returns a single field.  Will add if necessary.
-        """
-        f = self._determine_fields([key])[0]
-        if f not in self.field_data and key not in self.field_data:
-            self.get_data(f)
-
-        return self.field_data[f]
-
-    def _determine_fields(self, fields):
-        if str(fields) in self.ds._determined_fields:
-            return self.ds._determined_fields[str(fields)]
-        explicit_fields = []
-        for field in iter_fields(fields):
-            if field in self._container_fields:
-                explicit_fields.append(field)
-                continue
-
-            finfo = self.ds._get_field_info(field)
-            ftype, fname = finfo.name
-            explicit_fields.append((ftype, fname))
-
-        self.ds._determined_fields[str(fields)] = explicit_fields
-        return explicit_fields
-
-
-class YTRegion(YTDataContainer):
-    _locked = False
-    _sort_by = None
-    _selector = None
-    _current_chunk = None
-    _data_source = None
-    _dimensionality: int
-    _max_level = None
-    _min_level = None
-    _derived_quantity_chunking = "io"
-
-    _key_fields = ["x", "y", "z", "dx", "dy", "dz"]
-    _spatial = False
-    _num_ghost_zones = 0
-    _dimensionality = 3
-
-    _type_name = "region"
-    _con_args = ("center", "left_edge", "right_edge")
-
-    def __init__(
-        self,
-        center,
-        left_edge,
-        right_edge,
-        fields=None,
-        ds=None,
-        field_parameters=None,
-        data_source=None,
-    ):
-        super().__init__(ds, field_parameters)
-        self._data_source = data_source
-
-        self._set_center(center)
-        self.coords = None
-        self._grids = None
-        self.left_edge = self.ds.arr(left_edge.copy(), dtype="float64")
-        self.right_edge = self.ds.arr(right_edge.copy(), dtype="float64")
-
-    @property
-    def selector(self):
-        if self._selector is not None:
-            return self._selector
-        s_module = getattr(self, "_selector_module", yt.geometry.selection_routines)
-        sclass = getattr(s_module, f"{self._type_name}_selector", None)
-        self._selector = sclass(self)
-        return self._selector
-
-    def _identify_dependencies(self, fields_to_get, spatial=False):
-        inspected = 0
-        fields_to_get = fields_to_get[:]
-        for field in itertools.cycle(fields_to_get):
-            if inspected >= len(fields_to_get):
-                break
-            inspected += 1
-            fd = self.ds.field_dependencies.get(
-                field, None
-            ) or self.ds.field_dependencies.get(field[1], None)
-            requested = self._determine_fields(list(set(fd.requested)))
-            deps = [d for d in requested if d not in fields_to_get]
-            fields_to_get += deps
-        return sorted(fields_to_get)
-
-    def get_data(self, fields=None):
-        if self._current_chunk is None:
-            self.index._identify_base_chunk(self)
-        nfields = []
-        for field in self._determine_fields(fields):
-            # We need to create the field on the raw particle types
-            # for particles types (when the field is not directly
-            # defined for the derived particle type only)
-            finfo = self.ds.field_info[field]
-
-            nfields.append(field)
-
-        fields = nfields
-        # Now we collect all our fields
-        # Here is where we need to perform a validation step, so that if we
-        # have a field requested that we actually *can't* yet get, we put it
-        # off until the end.  This prevents double-reading fields that will
-        # need to be used in spatial fields later on.
-        fields_to_get = []
-        # This will be pre-populated with spatial fields
-        for field in self._determine_fields(fields):
-            finfo = self.ds._get_field_info(field)
-            finfo.check_available(self)
-
-            fields_to_get.append(field)
-        # At this point, we want to figure out *all* our dependencies.
-        fields_to_get = self._identify_dependencies(fields_to_get, self._spatial)
-        # We now split up into readers for the types of fields
-        fluids = []
-        finfos = {}
-        for field_key in fields_to_get:
-            finfo = self.ds._get_field_info(field_key)
-            finfos[field_key] = finfo
-            if field_key not in fluids:
-                fluids.append(field_key)
-        # The _read method will figure out which fields it needs to get from
-        # disk, and return a dict of those fields along with the fields that
-        # need to be generated.
-        read_fluids, gen_fluids = self.index._read_fluid_fields(
-            fluids, self, self._current_chunk
-        )
-        for f, v in read_fluids.items():
-            self.field_data[f] = self.ds.arr(v, units=finfos[f].units)
-            self.field_data[f].convert_to_units(finfos[f].output_units)
-
-    @property
-    def max_level(self):
-        return self.ds.max_level
-
-    @property
-    def min_level(self):
-        return self.ds.min_level
 
 
 class StreamDictFieldHandler(UserDict):
