@@ -105,9 +105,6 @@ class DerivedField:
             self._shared_aliases_list = alias._shared_aliases_list
             self._shared_aliases_list.append(self)
 
-    def check_available(self, data):
-        return True
-
     def get_dependencies(self, *args, **kwargs):
         """
         This returns a list of names of fields that this field depends on.
@@ -136,7 +133,6 @@ class DerivedField:
 
     def __call__(self, data):
         """Return the value of the field in a given *data* object."""
-        self.check_available(data)
         original_fields = data.keys()  # Copy
         if self._function is NullFunc:
             raise RuntimeError(
