@@ -5,7 +5,7 @@ import contextlib
 import functools
 import os
 import weakref
-from collections import UserDict
+from collections import UserDict, defaultdict
 from collections.abc import Callable
 from itertools import chain
 from typing import Any, Optional, Union
@@ -14,7 +14,6 @@ import numpy as np
 from unyt import Unit, UnitSystem
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import TranslationFunc
-from yt.fields.field_detector import FieldDetector
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
 from yt.units import YTQuantity, dimensions
@@ -25,6 +24,104 @@ from yt.units.yt_array import YTArray
 from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.io_handler import io_registry
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
+
+fp_units = {
+    "bulk_velocity": "cm/s",
+    "center": "cm",
+    "normal": "",
+    "cp_x_vec": "",
+    "cp_y_vec": "",
+    "cp_z_vec": "",
+    "x_hat": "",
+    "y_hat": "",
+    "z_hat": "",
+    "omega_baryon": "",
+    "virial_radius": "cm",
+    "observer_redshift": "",
+    "source_redshift": "",
+}
+
+
+class FieldDetector(defaultdict):
+    Level = 1
+    NumberOfParticles = 1
+    _read_exception = None
+    _id_offset = 0
+    domain_id = 0
+
+    def __init__(self, nd=16, ds=None, flat=False):
+        self.nd = nd
+        self.flat = flat
+        self._spatial = not flat
+        self.ActiveDimensions = [nd, nd, nd]
+        self.shape = tuple(self.ActiveDimensions)
+        self.size = np.prod(self.ActiveDimensions)
+        self.LeftEdge = [0.0, 0.0, 0.0]
+        self.RightEdge = [1.0, 1.0, 1.0]
+        self.dds = np.ones(3, "float64")
+        self.field_parameters = {}
+
+        self.ds = ds
+
+        class fake_index:
+            class fake_io:
+                _read_exception = RuntimeError
+
+            io = fake_io()
+
+        self.index = fake_index()
+        self.requested = []
+        self.requested_parameters = []
+        defaultdict.__init__(
+            self,
+            lambda: np.ones((nd, nd, nd), dtype="float64")
+            + 1e-4 * np.random.random((nd, nd, nd)),
+        )
+
+    def _reshape_vals(self, arr):
+        return arr
+
+    def __missing__(self, item: Union[tuple[str, str], str]):
+        field = item
+        finfo = self.ds._get_field_info(field)
+        params, permute_params = finfo._get_needed_parameters(self)
+        self.field_parameters.update(params)
+        # For those cases where we are guessing the field type, we will
+        # need to re-update -- otherwise, our item will always not have the
+        # field type.  This can lead to, for instance, "unknown" particle
+        # types not getting correctly identified.
+        # Note that the *only* way this works is if we also fix our field
+        # dependencies during checking.  Bug #627 talks about this.
+        _item: tuple[str, str] = finfo.name
+
+        if not permute_params:
+            vv = finfo(self)
+        if vv is not None:
+            self[_item] = vv
+            return self[_item]
+
+    _num_ghost_zones = 0
+    id = 1
+
+    @property
+    def fcoords(self):
+        fc = np.array(
+            np.mgrid[0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j, 0 : 1 : self.nd * 1j]
+        )
+        fc = fc.transpose()
+        return self.ds.arr(fc, units="code_length")
+
+    @property
+    def fcoords_vertex(self):
+        fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
+        return self.ds.arr(fc, units="code_length")
+
+    @property
+    def fwidth(self):
+        fw = np.ones((self.nd**3, 3), dtype="float64") / self.nd
+        if not self.flat:
+            fw.shape = (self.nd, self.nd, self.nd, 3)
+        return self.ds.arr(fw, units="code_length")
 
 
 class DerivedField:
