@@ -2512,7 +2512,6 @@ class Dataset(abc.ABC):
         self.field_info.setup_fluid_fields()
         self.field_info.setup_fluid_index_fields()
 
-        self.field_info.setup_extra_union_fields()
         self.field_info.load_all_plugins(self.default_fluid_type)
         deps, unloaded = self.field_info.check_derived_fields()
         self.field_dependencies.update(deps)
@@ -3319,88 +3318,14 @@ class FieldInfoContainer(UserDict):
             )
         self.setup_smoothed_fields(ptype, num_neighbors=num_neighbors, ftype=ftype)
 
-    def setup_extra_union_fields(self, ptype="all"):
-        if ptype != "all":
-            raise RuntimeError(
-                "setup_extra_union_fields is currently"
-                + 'only enabled for particle type "all".'
-            )
-        for units, field in self.extra_union_fields:
-            add_union_field(self, ptype, field, units)
-
-    def setup_smoothed_fields(self, ptype, num_neighbors=64, ftype="gas"):
-        # We can in principle compute this, but it is not yet implemented.
-        if (ptype, "density") not in self or not hasattr(self.ds, "_sph_ptypes"):
-            return
-        new_aliases = []
-        for ptype2, alias_name in list(self):
-            if ptype2 != ptype:
-                continue
-            if alias_name not in sph_whitelist_fields:
-                if alias_name.startswith("particle_"):
-                    pass
-                else:
-                    continue
-            uni_alias_name = alias_name
-            if "particle_position_" in alias_name:
-                uni_alias_name = alias_name.replace("particle_position_", "")
-            elif "particle_" in alias_name:
-                uni_alias_name = alias_name.replace("particle_", "")
-            new_aliases.append(
-                (
-                    (ftype, uni_alias_name),
-                    (ptype, alias_name),
-                )
-            )
-            if "particle_position_" in alias_name:
-                new_aliases.append(
-                    (
-                        (ftype, alias_name),
-                        (ptype, alias_name),
-                    )
-                )
-            new_aliases.append(
-                (
-                    (ptype, uni_alias_name),
-                    (ptype, alias_name),
-                )
-            )
-            for alias, source in new_aliases:
-                self.alias(alias, source)
-        self.alias((ftype, "particle_position"), (ptype, "particle_position"))
-        self.alias((ftype, "particle_mass"), (ptype, "particle_mass"))
-
-    # Collect the names for all aliases if geometry is curvilinear
     def get_aliases_gallery(self) -> list[FieldName]:
-        aliases_gallery: list[FieldName] = []
-        known_other_fields = dict(self.known_other_fields)
-
-        if self.ds is None:
-            return aliases_gallery
-        return aliases_gallery
+        return []
 
     def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
         known_other_fields = dict(self.known_other_fields)
 
-        # For non-Cartesian geometry, convert alias of vector fields to
-        # curvilinear coordinates
-        aliases_gallery = self.get_aliases_gallery()
-
         for field in sorted(self.field_list):
-            if not isinstance(field, tuple) or len(field) != 2:
-                raise RuntimeError
-            args = known_other_fields.get(field[1], None)
-            if args is not None:
-                units, aliases, display_name = args
-            else:
-                try:
-                    node = ytcfg.get("fields", *field).as_dict()
-                except KeyError:
-                    node = {}
-
-                units = node.get("units", "")
-                aliases = node.get("aliases", [])
-                display_name = node.get("display_name", None)
+            units, aliases, display_name  = known_other_fields.get(field[1], None)
 
             # We allow field_units to override this.  First we check if the
             # field *name* is in there, then the field *tuple*.
@@ -3409,8 +3334,6 @@ class FieldInfoContainer(UserDict):
             self.add_output_field(
                 field, sampling_type="cell", units=units, display_name=display_name
             )
-            axis_names = self.ds.coordinates.axis_order
-            geometry: Geometry = self.ds.geometry
             for alias in aliases:
                 self.alias((ftype, alias), field)
 
@@ -3477,8 +3400,6 @@ class FieldInfoContainer(UserDict):
             raise ValueError(f"Expected name to be a tuple[str, str], got {name}")
 
     def load_all_plugins(self, ftype: Optional[str] = "gas") -> None:
-        if ftype is None:
-            return
         loaded = []
         for n in sorted(field_plugins):
             loaded += self.load_plugin(n, ftype)
@@ -3505,12 +3426,6 @@ class FieldInfoContainer(UserDict):
         return loaded, unavailable
 
     def add_output_field(self, name, sampling_type, **kwargs):
-        if name[1] == "density":
-            if name in self:
-                # this should not happen, but it does
-                # it'd be best to raise an error here but
-                # it may take a while to cleanup internal issues
-                return
         kwargs.setdefault("ds", self.ds)
         self[name] = DerivedField(name, sampling_type, NullFunc, **kwargs)
 
@@ -3519,7 +3434,6 @@ class FieldInfoContainer(UserDict):
         alias_name: FieldKey,
         original_name: FieldKey,
         units: Optional[str] = None,
-        deprecate: Optional[tuple[str, Optional[str]]] = None,
     ):
         """
         Alias one field to another field.
@@ -3540,8 +3454,6 @@ class FieldInfoContainer(UserDict):
             deprecated, and the second marking when the field will be
             removed.
         """
-        if original_name not in self:
-            return
         if units is None:
             # We default to CGS here, but in principle, this can be pluggable
             # as well.
@@ -3549,14 +3461,12 @@ class FieldInfoContainer(UserDict):
             # self[original_name].units may be set to `None` at this point
             # to signal that units should be autoset later
             oru = self[original_name].units
-            if oru is None:
-                units = None
+
+            u = Unit(oru, registry=self.ds.unit_registry)
+            if u.dimensions is not dimensionless:
+                units = str(self.ds.unit_system[u.dimensions])
             else:
-                u = Unit(oru, registry=self.ds.unit_registry)
-                if u.dimensions is not dimensionless:
-                    units = str(self.ds.unit_system[u.dimensions])
-                else:
-                    units = oru
+                units = oru
 
         self.field_aliases[alias_name] = original_name
         function = TranslationFunc(original_name)
@@ -3570,44 +3480,12 @@ class FieldInfoContainer(UserDict):
                 alias=self[original_name],
             )
 
-
-    def has_key(self, key):
-        # This gets used a lot
-        if key in self:
-            return True
-        if self.fallback is None:
-            return False
-        return key in self.fallback
-
-    def __missing__(self, key):
-        if self.fallback is None:
-            raise KeyError(f"No field named {key}")
-        return self.fallback[key]
-
-    @classmethod
-    def create_with_fallback(cls, fallback, name=""):
-        obj = cls()
-        obj.fallback = fallback
-        obj.name = name
-        return obj
-
     def __contains__(self, key):
         if super().__contains__(key):
             return True
         if self.fallback is None:
             return False
-        return key in self.fallback
 
-    def __iter__(self):
-        yield from super().__iter__()
-        if self.fallback is not None:
-            yield from self.fallback
-
-    def keys(self):
-        keys = super().keys()
-        if self.fallback:
-            keys += list(self.fallback.keys())
-        return keys
 
     def check_derived_fields(self, fields_to_check=None):
         # The following exceptions lists were obtained by expanding an
@@ -3660,11 +3538,6 @@ class FieldInfoContainer(UserDict):
                 continue
             # This next bit checks that we can't somehow generate everything.
             # We also manually update the 'requested' attribute
-            missing = not all(f in self.field_list for f in fd.requested)
-            if missing:
-                self.pop(field)
-                unavailable.append(field)
-                continue
             fd.requested = set(fd.requested)
             deps[field] = fd
 
@@ -3682,17 +3555,10 @@ class FieldInfoContainer(UserDict):
 
             filtered_dfl = []
             for field in dfl:
-                try:
-                    ftype, fname = field
-                    if "vertex" in fname:
-                        continue
-                except ValueError:
-                    # in very rare cases, there can a field represented by a single
-                    # string, like "emissivity"
-                    # this try block _should_ be removed and the error fixed upstream
-                    # for reference, a test that would break is
-                    # yt/data_objects/tests/test_fluxes.py::ExporterTests
-                    pass
+                ftype, fname = field
+                if "vertex" in fname:
+                    continue
+
                 filtered_dfl.append(field)
             dfl = filtered_dfl
 
@@ -3726,8 +3592,6 @@ class StreamFieldInfo(FieldInfoContainer):
         species_names = []
         for field in self.ds.stream_handler.field_units:
             units = self.ds.stream_handler.field_units[field]
-            if units != "":
-                self.add_output_field(field, sampling_type="cell", units=units)
 
         self.species_names = sorted(species_names)
 
@@ -3785,9 +3649,6 @@ class MinimalStreamDataset(Dataset):
         self.omega_matter = 0.0
         self.hubble_constant = 0.0
         self.cosmological_simulation = 0
-
-    def _set_units(self):
-        self.field_units = self.stream_handler.field_units
 
     def _set_code_unit_attributes(self):
         base_units = self.stream_handler.code_units
