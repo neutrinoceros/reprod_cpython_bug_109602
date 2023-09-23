@@ -187,7 +187,9 @@ class Dataset(abc.ABC):
         self._assign_unit_system(unit_system)
         self._setup_coordinate_handler(axis_order)
         self._set_derived_attrs()
-        self._setup_classes()
+        self.object_types = []
+        self.objects = []
+        self.plots = []
 
     def _set_derived_attrs(self):
         self.domain_center = 0.5 * (self.domain_right_edge + self.domain_left_edge)
@@ -227,12 +229,6 @@ class Dataset(abc.ABC):
 
         raise YTFieldNotFound(field, ds=self)
 
-    def _setup_classes(self):
-        # Called by subclass
-        self.object_types = []
-        self.objects = []
-        self.plots = []
-        self.object_types.sort()
 
     def _assign_unit_system(self, unit_system) -> None:
         # we need to determine if the requested unit system
