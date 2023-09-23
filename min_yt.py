@@ -39,13 +39,7 @@ class CartesianCoordinateHandler:
             )
 
 
-def TranslationFunc(field_name):
-    def _TranslationFunc(field, data):
-        # We do a bunch of in-place modifications, so we will copy this.
-        return data[field_name].copy()
 
-    _TranslationFunc.alias_name = field_name
-    return _TranslationFunc
 
 
 class FieldDetector(defaultdict):
@@ -243,7 +237,12 @@ class FieldInfoContainer(UserDict):
 
     def alias(self, alias_name, original_name):
         self.field_aliases[alias_name] = original_name
-        function = TranslationFunc(original_name)
+
+        def _TranslationFunc(field, data):
+            return data[original_name].copy()
+
+        _TranslationFunc.alias_name = original_name
+        function = _TranslationFunc
 
         self.add_field(
             alias_name,
