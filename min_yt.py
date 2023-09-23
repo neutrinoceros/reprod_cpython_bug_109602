@@ -27,10 +27,6 @@ class IOHandlerStream:
         self.field_units = ds.stream_handler.field_units
         self.queue = defaultdict(dict)
         self.ds = ds
-        self._last_selector_id = None
-        self._last_selector_counts = None
-        self._array_fields = {}
-        self._cached_fields = {}
 
 
 def TranslationFunc(field_name):
