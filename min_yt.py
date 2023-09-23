@@ -4,8 +4,6 @@ import abc
 import contextlib
 import functools
 import os
-import time
-import uuid
 import weakref
 from collections import UserDict
 from collections.abc import Callable
@@ -25,13 +23,11 @@ from yt.fields.field_exceptions import FieldUnitsError, NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
-from yt.geometry.grid_geometry_handler import GridIndex
 from yt.units import YTQuantity, dimensions
 from yt.units.dimensions import current_mks, dimensionless
-from yt.units.unit_object import Unit  # type: ignore
 from yt.units.unit_registry import UnitRegistry  # type: ignore
 from yt.units.unit_systems import create_code_unit_system, unit_system_registry
-from yt.units.yt_array import YTArray, YTQuantity
+from yt.units.yt_array import YTArray
 from yt.utilities.definitions import MAXLEVEL
 from yt.utilities.exceptions import (
     YTCoordinateNotImplemented,
@@ -197,9 +193,6 @@ class Dataset(abc.ABC):
     _index_class: type[Index]
     field_units: Optional[dict[AnyFieldKey, Unit]] = None
     conversion_factors: Optional[dict[str, float]] = None
-    # _instantiated represents an instantiation time (since Epoch)
-    # the default is a place holder sentinel, falsy value
-    _instantiated: float = 0
     _particle_type_counts = None
     _proj_type = "quad_proj"
     _ionization_label_format = "roman_numeral"
@@ -236,9 +229,6 @@ class Dataset(abc.ABC):
         self.default_species_fields = default_species_fields
 
         self._input_filename: str = os.fspath(filename)
-
-        # to get the timing right, do this before the heavy lifting
-        self._instantiated = time.time()
 
         self.no_cgs_equiv_length = False
         self._create_unit_registry(unit_system)
@@ -819,13 +809,12 @@ class MinimalStreamDataset(Dataset):
         self.filename = self.stream_handler.name
         Dataset.__init__(
             self,
-            filename=f"InMemoryParameterFile_{uuid.uuid4().hex}",
+            filename="InMemoryParameterFile_1234567890",
             dataset_type=self._dataset_type,
             unit_system="cgs",
         )
 
     def _parse_parameter_file(self):
-        self.parameters["CurrentTimeIdentifier"] = time.time()
         self.domain_left_edge = self.stream_handler.domain_left_edge.copy()
         self.domain_right_edge = self.stream_handler.domain_right_edge.copy()
         self.refine_by = self.stream_handler.refine_by
