@@ -24,6 +24,6 @@ def foo():
 
 
 NLOOPS = 300
-for i in range(1, NLOOPS+1):
+for i in range(1, NLOOPS + 1):
     foo()
     print(f"{i}/{NLOOPS}", end="\r")
