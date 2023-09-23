@@ -253,7 +253,6 @@ class Dataset(abc.ABC):
         self.unit_registry.add("code_temperature", 1.0, dimensions.temperature)
 
         self._parse_parameter_file()
-        self._unit_system_name = "cgs"
         self.unit_system = unit_system_registry["cgs"]
         self.unit_registry.unit_system = self.unit_system
 
@@ -269,7 +268,7 @@ class Dataset(abc.ABC):
             # everything is stored inside a MutableAttribute.
             v = self.arr(v, "code_length")
             setattr(self, n, v)
-    
+
         self.object_types = []
         self.objects = []
         self.plots = []
