@@ -3318,9 +3318,6 @@ class FieldInfoContainer(UserDict):
             )
         self.setup_smoothed_fields(ptype, num_neighbors=num_neighbors, ftype=ftype)
 
-    def get_aliases_gallery(self) -> list[FieldName]:
-        return []
-
     def setup_fluid_aliases(self, ftype: FieldType = "gas") -> None:
         known_other_fields = dict(self.known_other_fields)
 
