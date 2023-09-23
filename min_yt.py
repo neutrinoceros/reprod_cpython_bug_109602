@@ -21,7 +21,6 @@ from yt.utilities.exceptions import YTFieldNotFound
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-
 class IOHandlerStream:
     def __init__(self, ds):
         self.fields = ds.stream_handler.fields
