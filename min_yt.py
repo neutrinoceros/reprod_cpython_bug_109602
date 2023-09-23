@@ -100,9 +100,6 @@ class FieldDetector(defaultdict):
             self[_item] = vv
             return self[_item]
 
-    _num_ghost_zones = 0
-    id = 1
-
     @property
     def fcoords(self):
         fc = np.array(
