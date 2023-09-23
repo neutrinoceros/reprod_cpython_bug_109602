@@ -17,7 +17,6 @@ import yt.geometry.selection_routines
 from unyt import Unit, UnitSystem, unyt_quantity
 from unyt.exceptions import UnitConversionError
 from yt._typing import AnyFieldKey, FieldKey, FieldName, FieldType, KnownFieldsT
-from yt.data_objects.derived_quantities import DerivedQuantityCollection
 from yt.data_objects.field_data import YTFieldData
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import (
@@ -172,7 +171,6 @@ class YTRegion(YTDataContainer):
     ):
         super().__init__(ds, field_parameters)
         self._data_source = data_source
-        self.quantities = DerivedQuantityCollection(self)
 
         self._set_center(center)
         self.coords = None
