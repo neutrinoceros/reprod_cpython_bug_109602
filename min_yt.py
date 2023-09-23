@@ -22,22 +22,16 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
 
-
-class BaseIOHandler:
+class IOHandlerStream:
     def __init__(self, ds):
+        self.fields = ds.stream_handler.fields
+        self.field_units = ds.stream_handler.field_units
         self.queue = defaultdict(dict)
         self.ds = ds
         self._last_selector_id = None
         self._last_selector_counts = None
         self._array_fields = {}
         self._cached_fields = {}
-
-
-class IOHandlerStream(BaseIOHandler):
-    def __init__(self, ds):
-        self.fields = ds.stream_handler.fields
-        self.field_units = ds.stream_handler.field_units
-        super().__init__(ds)
 
 
 def TranslationFunc(field_name):
