@@ -11,7 +11,6 @@ from itertools import chain
 from typing import Any, Literal, Optional, Union
 
 import numpy as np
-from more_itertools import always_iterable
 from unyt import Unit, UnitSystem
 from unyt.exceptions import UnitConversionError
 from yt.arraytypes import blankRecordArray
@@ -19,7 +18,7 @@ from yt.data_objects.index_subobjects.grid_patch import AMRGridPatch
 from yt.data_objects.region_expression import RegionExpression
 from yt.fields.derived_field import NullFunc, TranslationFunc
 from yt.fields.field_detector import FieldDetector
-from yt.fields.field_exceptions import FieldUnitsError, NeedsConfiguration
+from yt.fields.field_exceptions import NeedsConfiguration
 from yt.fields.field_plugin_registry import FunctionName
 from yt.geometry.coordinates.api import CartesianCoordinateHandler
 from yt.geometry.geometry_handler import Index
@@ -64,13 +63,9 @@ class DerivedField:
         self.sampling_type = sampling_type
         self.vector_field = vector_field
         self.ds = ds
-        self._ionization_label_format = self.ds._ionization_label_format
-
-        self.nodal_flag = [0, 0, 0]
 
         self._function = function
-
-        self.validators = list(always_iterable(validators))
+        self.validators = []
 
         # handle units
         self.units: Optional[Union[str, bytes, Unit]]
@@ -250,7 +245,6 @@ class Dataset(abc.ABC):
     def _get_field_info_helper(self, field, /):
         self.index
         ftype, fname = field
-
 
         if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname], []
@@ -636,7 +630,6 @@ class GridIndex(Index, abc.ABC):
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
 
-
     def _initialize_level_stats(self):
         # Now some statistics:
         #   0 = number of grids
@@ -710,7 +703,7 @@ class StreamHierarchy(GridIndex):
         for id in range(self.num_grids):
             self.grids.append(self.grid(id, self))
             self.grids[id].Level = self.grid_levels[id, 0]
-        reverse_tree = self.stream_handler.parent_ids.tolist()
+        self.stream_handler.parent_ids.tolist()
 
         self.max_level = self.grid_levels.max()
         temp_grids = np.empty(self.num_grids, dtype="object")
