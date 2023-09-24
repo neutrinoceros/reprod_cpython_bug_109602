@@ -1,2 +1,2 @@
-def bar(data, field_names):
-    data[field_names]
+def bar(data):
+    data["spam"]

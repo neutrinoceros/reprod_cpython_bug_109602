@@ -7,10 +7,10 @@ def foo():
     coordinates = Coordinates()
     coordinates.setup_fields(ds.field_info)
 
-    def foo_closure(field, data):
-        bar(data, ("gas", "velocity_x"))
+    def _f(field, data):
+        bar(data)
 
-    ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
+    ds.field_info.add_field(("a", "b"), function=_f)
     ds.field_info.check_derived_fields()
 
 
