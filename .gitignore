@@ -3,6 +3,7 @@
 __pycache__
 *.so
 *.cpp
+*.c
 .#.*
 *~
 *egg-info
