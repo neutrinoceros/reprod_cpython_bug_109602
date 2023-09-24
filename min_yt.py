@@ -21,7 +21,9 @@ class CartesianCoordinateHandler:
     def setup_fields(self, registry):
         def _get_vert_fields(axi, units="cm"):
             def _vert(field, data):
-                rv = np.array(data.fcoords_vertex[..., axi])
+
+                fcoords_vertex = np.random.random((data.nd, data.nd, data.nd, 8, 3))
+                rv = np.array(fcoords_vertex[..., axi])
                 return rv
 
             return _vert
@@ -76,9 +78,6 @@ class FieldDetector(defaultdict):
             self[_item] = vv
             return self[_item]
 
-    @property
-    def fcoords_vertex(self):
-        return np.random.random((self.nd, self.nd, self.nd, 8, 3))
 
 
 class DerivedField:
