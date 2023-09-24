@@ -29,9 +29,7 @@ class CartesianCoordinateHandler:
             f3 = _get_vert_fields(axi)
             registry.add_field(
                 ("index", f"vertex_{ax}"),
-                sampling_type="cell",
                 function=f3,
-                display_field=False,
                 units="cm",
             )
 
@@ -80,21 +78,13 @@ class DerivedField:
     def __init__(
         self,
         name,
-        sampling_type,
         function,
         units=None,
-        display_field=True,
-        not_in_all=False,
-        display_name=None,
         ds=None,
         *,
         alias: DerivedField | None = None,
     ):
         self.name = name
-        self.display_name = display_name
-        self.not_in_all = not_in_all
-        self.display_field = display_field
-        self.sampling_type = sampling_type
         self.ds = ds
 
         self._function = function
@@ -159,17 +149,9 @@ class FieldInfoContainer(UserDict):
             for f in index_fields:
                 self.alias((ftype, f), ("index", f))
 
-    def add_field(
-        self,
-        name,
-        function,
-        sampling_type: str,
-        *,
-        alias=None,
-        **kwargs,
-    ) -> None:
+    def add_field(self, name, function, **kwargs):
         kwargs.setdefault("ds", self.ds)
-        self[name] = DerivedField(name, sampling_type, function, alias=alias, **kwargs)
+        self[name] = DerivedField(name, function, alias=None, **kwargs)
 
     def load_all_plugins(self, ftype: str | None = "gas") -> None:
         loaded = []
@@ -193,14 +175,7 @@ class FieldInfoContainer(UserDict):
         _TranslationFunc.alias_name = original_name
         function = _TranslationFunc
 
-        self.add_field(
-            alias_name,
-            function=function,
-            sampling_type=self[original_name].sampling_type,
-            display_name=self[original_name].display_name,
-            units="cm",
-            alias=self[original_name],
-        )
+        self.add_field(alias_name, function=function, units="cm")
 
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
@@ -254,7 +229,6 @@ def setup_fluid_fields(registry, ftype="gas", slice_info=None):
 
         registry.add_field(
             ("gas", "velocity_spherical_radius"),
-            sampling_type="local",
             function=foo_closure,
             units="cm/s",
         )
