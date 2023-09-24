@@ -38,12 +38,6 @@ class FieldInfoContainer(UserDict):
         super().__init__()
         self.ds = ds
 
-    def setup_fluid_index_fields(self):
-        def _TranslationFunc(field, data):
-            return data["index", "vertex_x"]
-
-        self.add_field(("gas", "vertex_x"), function=_TranslationFunc)
-
     def add_field(self, name, function):
         self[name] = DerivedField(name, function, ds=self.ds)
 
