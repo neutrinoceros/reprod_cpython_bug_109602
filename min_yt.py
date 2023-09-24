@@ -26,11 +26,8 @@ class CartesianCoordinateHandler:
             return _vert
 
         for axi, ax in enumerate("xyz"):
-            f3 = _get_vert_fields(axi)
             registry.add_field(
-                ("index", f"vertex_{ax}"),
-                function=f3,
-                units="cm",
+                ("index", f"vertex_{ax}"), function=_get_vert_fields(axi)
             )
 
 
@@ -79,7 +76,6 @@ class DerivedField:
         self,
         name,
         function,
-        units=None,
         ds=None,
         *,
         alias: DerivedField | None = None,
@@ -89,7 +85,6 @@ class DerivedField:
 
         self._function = function
         self.validators = []
-        self.units = str(units)
 
         if alias is None:
             self._shared_aliases_list = [self]
@@ -173,9 +168,8 @@ class FieldInfoContainer(UserDict):
             return data[original_name].copy()
 
         _TranslationFunc.alias_name = original_name
-        function = _TranslationFunc
 
-        self.add_field(alias_name, function=function, units="cm")
+        self.add_field(alias_name, function=_TranslationFunc)
 
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
@@ -227,10 +221,6 @@ def setup_fluid_fields(registry, ftype="gas", slice_info=None):
 
         xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
 
-        registry.add_field(
-            ("gas", "velocity_spherical_radius"),
-            function=foo_closure,
-            units="cm/s",
-        )
+        registry.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
 
     create_vector_fields(registry)
