@@ -67,7 +67,10 @@ class FieldInfoContainer(UserDict):
 
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
-        fields_to_check = fields_to_check or list(self.keys())
+        if fields_to_check is None:
+            fields_to_check = list(self.keys())
+        else:
+            pass
         for field in fields_to_check:
             fi = self[field]
             try:
