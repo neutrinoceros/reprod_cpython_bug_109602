@@ -319,7 +319,7 @@ class StreamFieldInfo(FieldInfoContainer):
 
 class Dataset:
     default_fluid_type = "gas"
-    fluid_types = ("gas", "deposit", "index")
+    fluid_types = ("gas", "deposit", "index", "stream")
     coordinates = None
     storage_filename = None
     _particle_type_counts = None
@@ -331,23 +331,13 @@ class Dataset:
     domain_offset = np.zeros(3, dtype="int64")
 
     def __init__(self, *, stream_handler):
-        self.fluid_types += ("stream",)
         self.stream_handler = stream_handler
-        self._determined_fields = {}
-
         self.domain_left_edge = stream_handler.domain_left_edge.copy()
         self.domain_right_edge = stream_handler.domain_right_edge.copy()
         self.domain_dimensions = stream_handler.domain_dimensions
 
         self.coordinates = CartesianCoordinateHandler(self)
         self.arr = np.array
-        for attr in ("left_edge", "right_edge"):
-            n = f"domain_{attr}"
-            v = getattr(self, n)
-            # Note that we don't add on _ipython_display_ here because
-            # everything is stored inside a MutableAttribute.
-            v = self.arr(v)
-            setattr(self, n, v)
 
     def _get_field_info(self, field, /):
         ftype, fname = field
