@@ -78,17 +78,13 @@ class FieldInfoContainer(UserDict):
         self[name] = DerivedField(name, function, **kwargs)
 
     def load_all_plugins(self) -> None:
-        loaded = []
-        orig = set(self.items())
         setup_fluid_fields(self)
-        loaded += [n for n, v in set(self.items()).difference(orig)]
-
-        deps, unavailable = self.check_derived_fields(loaded)
+        deps, unavailable = self.check_derived_fields([])
         self.ds.field_dependencies.update(deps)
         # Note we may have duplicated
         dfl = set(self.ds.derived_field_list).union(deps.keys())
         self.ds.derived_field_list = sorted(dfl)
-        return loaded, unavailable
+        return [], unavailable
 
     def alias(self, alias_name, original_name):
         def _TranslationFunc(field, data):
