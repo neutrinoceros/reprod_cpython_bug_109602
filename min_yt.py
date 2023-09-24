@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import weakref
 from collections import UserDict, defaultdict
 from itertools import chain
