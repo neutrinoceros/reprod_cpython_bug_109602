@@ -246,7 +246,7 @@ class StreamHierarchy:
         self.dataset_type = dataset_type
         self.float_type = "float64"
         self.dataset = weakref.proxy(ds)  # for _obtain_enzo
-        self.stream_handler = ds.stream_handler
+        self.stream_handler = StreamHandler()
         self.float_type = "float64"
         self.directory = os.getcwd()
         self.dataset = weakref.proxy(ds)
@@ -289,8 +289,7 @@ class Dataset:
     default_fluid_type = "gas"
     fluid_types = ("gas", "deposit", "index", "stream")
 
-    def __init__(self, *, stream_handler):
-        self.stream_handler = stream_handler
+    def __init__(self):
         self.coordinates = CartesianCoordinateHandler(self)
 
     def _get_field_info(self, field, /):
@@ -302,7 +301,7 @@ class Dataset:
 
 
 def load_uniform_grid():
-    return Dataset(stream_handler=StreamHandler())
+    return Dataset()
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
