@@ -17,7 +17,7 @@ class CartesianCoordinateHandler:
         self.ds = weakref.proxy(ds)
 
     def setup_fields(self, registry):
-        def _get_vert_fields(axi, units="cm"):
+        def _get_vert_fields(axi):
             def _vert(field, data):
                 fcoords_vertex = np.random.random((data.nd, data.nd, data.nd, 8, 3))
                 rv = np.array(fcoords_vertex[..., axi])
