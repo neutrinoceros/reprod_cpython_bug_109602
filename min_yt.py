@@ -228,16 +228,7 @@ class FieldInfoContainer(UserDict):
 
 
 class StreamHierarchy:
-    grid = object
     float_type = "float64"
-    _preload_implemented = False
-    _index_properties = (
-        "grid_left_edge",
-        "grid_right_edge",
-        "grid_levels",
-        "grid_particle_count",
-        "grid_dimensions",
-    )
 
     def __init__(self, ds, dataset_type=None):
         self.dataset_type = dataset_type
@@ -248,12 +239,6 @@ class StreamHierarchy:
         self.directory = os.getcwd()
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
-        self._parallel_locking = False
-        self._data_file = None
-        self._data_mode = None
-        self.num_grids = None
-        self.num_grids = 1
-        self.io = object()
         fl = set(self.stream_handler.get_fields())
         fl.update(set(getattr(self, "field_list", [])))
         self.field_list = list(fl)
