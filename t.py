@@ -6,11 +6,7 @@ def main():
     ds = Dataset()
     coordinates = Coordinates()
     coordinates.setup_fields(ds.field_info)
-
-    def _f(field, data):
-        bar(data)
-
-    ds.field_info.add_field("test", function=_f)
+    ds.field_info.add_field("test", function=lambda field, data: bar(data))
     ds.field_info.check_derived_fields()
 
 
