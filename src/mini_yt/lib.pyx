@@ -5,9 +5,6 @@ import numpy as np
 cimport cython
 cimport numpy as np
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
 def obtain_relative_velocity_vector(
         data,
         field_names = (("gas", "velocity_x"), ("gas", "velocity_y"), ("gas", "velocity_z")),
