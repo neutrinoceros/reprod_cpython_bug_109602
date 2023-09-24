@@ -134,20 +134,8 @@ class StreamDictFieldHandler(UserDict):
 
 class StreamHandler:
     def __init__(
-        self,
-        *,
-        dimensions,
-        levels,
-        parent_ids,
-        particle_count,
-        processor_ids,
+        self
     ):
-        self.dimensions = dimensions
-        self.levels = levels
-        self.parent_ids = parent_ids
-        self.particle_count = particle_count
-        self.processor_ids = processor_ids
-        self.num_grids = self.levels.size
         self.fields = StreamDictFieldHandler()
 
     def get_fields(self):
@@ -279,7 +267,7 @@ class StreamHierarchy:
         self._detect_output_fields()
 
     def _count_grids(self):
-        self.num_grids = self.stream_handler.num_grids
+        self.num_grids = 1
 
     def _detect_output_fields(self):
         # NOTE: Because particle unions add to the actual field list, without
@@ -322,23 +310,8 @@ class Dataset:
 
 
 def load_uniform_grid(*, domain_dimensions):
-    domain_dimensions = np.array(domain_dimensions)
-    bbox = np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], "float64")
-
-    grid_levels = np.zeros(1, dtype="int32").reshape((1, 1))
-    # First we fix our field names, apply units to data
-    # and check for consistency of field shapes
-
-    grid_dimensions = domain_dimensions.reshape(1, 3).astype("int32")
-
-    handler = StreamHandler(
-        dimensions=grid_dimensions,
-        levels=grid_levels,
-        parent_ids=-np.ones(1, dtype="int64"),
-        particle_count=np.zeros(1, dtype="int64").reshape(1, 1),
-        processor_ids=np.zeros(1).reshape((1, 1)),
-    )
-    handler.domain_dimensions = domain_dimensions
+    handler = StreamHandler()
+    handler.domain_dimensions = np.array(domain_dimensions)
     return Dataset(stream_handler=handler)
 
 
