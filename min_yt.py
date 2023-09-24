@@ -38,25 +38,17 @@ class FieldDetector(defaultdict):
             + 1e-4 * np.random.random((nd, nd, nd))
         )
 
-    def __missing__(self, item: tuple[str, str] | str):
-        field = item
+    def __missing__(self, field):
         finfo = self.ds._get_field_info(field)
         params = {}
         permute_params = {}
         self.field_parameters.update(params)
-        # For those cases where we are guessing the field type, we will
-        # need to re-update -- otherwise, our item will always not have the
-        # field type.  This can lead to, for instance, "unknown" particle
-        # types not getting correctly identified.
-        # Note that the *only* way this works is if we also fix our field
-        # dependencies during checking.  Bug #627 talks about this.
-        _item: tuple[str, str] = finfo.name
 
         if not permute_params:
             vv = finfo(self)
         if vv is not None:
-            self[_item] = vv
-            return self[_item]
+            self[finfo.name] = vv
+            return vv
 
 
 class DerivedField:
