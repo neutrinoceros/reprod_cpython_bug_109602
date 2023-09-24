@@ -92,10 +92,6 @@ class DerivedField:
 
 
 class FieldInfoContainer(UserDict):
-    known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
-    known_particle_fields = ()
-    extra_union_fields = ()
-
     def __init__(self, ds, field_list, slice_info=None):
         super().__init__()
         self.ds = ds
