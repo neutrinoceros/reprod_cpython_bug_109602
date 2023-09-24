@@ -50,17 +50,10 @@ class FieldInfoContainer(UserDict):
 
     def load_all_plugins(self) -> None:
         setup_fluid_fields(self)
-        deps = self.check_derived_fields([])
-        self.ds.field_dependencies.update(deps)
-        dfl = set(deps.keys())
-        self.ds.derived_field_list = sorted(dfl)
 
-    def check_derived_fields(self, fields_to_check=None):
+    def check_derived_fields(self):
         deps = {}
-        if fields_to_check is None:
-            fields_to_check = list(self.keys())
-        else:
-            pass
+        fields_to_check = list(self.keys())
         for field in fields_to_check:
             fi = self[field]
             try:
