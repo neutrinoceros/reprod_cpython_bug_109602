@@ -86,10 +86,10 @@ class FieldInfoContainer(UserDict):
         kwargs.setdefault("ds", self.ds)
         self[name] = DerivedField(name, function, **kwargs)
 
-    def load_all_plugins(self, ftype: str | None = "gas") -> None:
+    def load_all_plugins(self) -> None:
         loaded = []
         orig = set(self.items())
-        setup_fluid_fields(self, ftype, slice_info=self.slice_info)
+        setup_fluid_fields(self)
         loaded += [n for n, v in set(self.items()).difference(orig)]
 
         deps, unavailable = self.check_derived_fields(loaded)
@@ -143,7 +143,7 @@ class Dataset:
             raise Exception
 
 
-def setup_fluid_fields(registry, ftype="gas", slice_info=None):
+def setup_fluid_fields(registry):
     def create_vector_fields(registry) -> None:
         def foo_closure(field, data):
             obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")

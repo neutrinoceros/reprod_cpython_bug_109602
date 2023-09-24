@@ -10,7 +10,7 @@ def foo():
     ds.coordinates.setup_fields(ds.field_info)
     ds.field_info.setup_fluid_index_fields()
 
-    ds.field_info.load_all_plugins(ds.default_fluid_type)
+    ds.field_info.load_all_plugins()
     deps, unloaded = ds.field_info.check_derived_fields()
 
 
