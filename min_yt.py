@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import weakref
 from collections import UserDict, defaultdict
 
 import numpy as np
@@ -9,7 +6,7 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 class CartesianCoordinateHandler:
     def __init__(self, ds):
-        self.ds = weakref.proxy(ds)
+        self.ds = ds
 
     def setup_fields(self, registry):
         def _get_vert_fields(axi):
