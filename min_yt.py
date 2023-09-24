@@ -72,25 +72,13 @@ class FieldDetector(defaultdict):
 
 
 class DerivedField:
-    def __init__(
-        self,
-        name,
-        function,
-        ds=None,
-        *,
-        alias: DerivedField | None = None,
-    ):
+    def __init__(self, name, function, ds=None):
         self.name = name
         self.ds = ds
 
         self._function = function
         self.validators = []
-
-        if alias is None:
-            self._shared_aliases_list = [self]
-        else:
-            self._shared_aliases_list = alias._shared_aliases_list
-            self._shared_aliases_list.append(self)
+        self._shared_aliases_list = [self]
 
     def get_dependencies(self, *args, **kwargs):
         """
@@ -146,7 +134,7 @@ class FieldInfoContainer(UserDict):
 
     def add_field(self, name, function, **kwargs):
         kwargs.setdefault("ds", self.ds)
-        self[name] = DerivedField(name, function, alias=None, **kwargs)
+        self[name] = DerivedField(name, function, **kwargs)
 
     def load_all_plugins(self, ftype: str | None = "gas") -> None:
         loaded = []
