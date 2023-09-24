@@ -161,7 +161,7 @@ class FieldInfoContainer(UserDict):
 
 class Dataset:
     default_fluid_type = "gas"
-    fluid_types = ("gas", "deposit", "index", "stream")
+    fluid_types = ("gas",)
 
     def __init__(self):
         self.coordinates = CartesianCoordinateHandler(self)
