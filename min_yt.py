@@ -180,7 +180,7 @@ class Index:
         self.stream_handler = StreamHandler()
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
-        self.field_list = list(set(self.stream_handler.get_fields()))
+        self.field_list = []
 
 
 class Dataset:
