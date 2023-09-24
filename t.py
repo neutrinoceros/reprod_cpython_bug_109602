@@ -7,7 +7,7 @@ def main():
     coordinates = Coordinates()
     coordinates.setup_fields(ds.field_info)
     ds.field_info.add_field("test", function=lambda data: bar(data))
-    ds.field_info.check_derived_fields()
+    ds.field_info.check_fields()
 
 
 NLOOPS = 3000

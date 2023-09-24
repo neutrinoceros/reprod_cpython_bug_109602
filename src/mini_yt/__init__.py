@@ -21,7 +21,7 @@ class FieldDetector(defaultdict):
         return vv
 
 
-class DerivedField:
+class Field:
     def __init__(self, name, function, ds):
         self.name = name
         self.ds = ds
@@ -37,9 +37,9 @@ class FieldInfoContainer(UserDict):
         self.ds = ds
 
     def add_field(self, name, function):
-        self[name] = DerivedField(name, function, ds=self.ds)
+        self[name] = Field(name, function, ds=self.ds)
 
-    def check_derived_fields(self):
+    def check_fields(self):
         deps = {}
         fields_to_check = list(self.keys())
         for field in fields_to_check:
