@@ -10,7 +10,7 @@ def main():
     def _f(field, data):
         bar(data)
 
-    ds.field_info.add_field(("a", "b"), function=_f)
+    ds.field_info.add_field("test", function=_f)
     ds.field_info.check_derived_fields()
 
 

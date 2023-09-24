@@ -6,7 +6,7 @@ class Coordinates:
         def _vert(field, data):
             return list(range(16**3*8))
 
-        registry.add_field(("index", "vertex_x"), function=_vert)
+        registry.add_field("c", function=_vert)
 
 
 class FieldDetector(defaultdict):
