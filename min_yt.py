@@ -291,11 +291,6 @@ class StreamFieldInfo(FieldInfoContainer):
 class Dataset:
     default_fluid_type = "gas"
     fluid_types = ("gas", "deposit", "index", "stream")
-    coordinates = None
-    storage_filename = None
-    _particle_type_counts = None
-    _proj_type = "quad_proj"
-    _determined_fields = None
 
     def __init__(self, *, stream_handler):
         self.stream_handler = stream_handler
