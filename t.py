@@ -10,7 +10,7 @@ def foo():
     def foo_closure(field, data):
         bar(data, (xn,))
 
-    xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
+    xn = ("gas", f"velocity_x")
     ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
     ds.field_info.check_derived_fields()
 
