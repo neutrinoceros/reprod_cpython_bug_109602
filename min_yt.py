@@ -151,6 +151,8 @@ class StreamHandler:
     ):
         self.left_edges = np.array(left_edges)
         self.right_edges = np.array(right_edges)
+        self.domain_left_edge = left_edges
+        self.domain_right_edge = right_edges
         self.dimensions = dimensions
         self.levels = levels
         self.parent_ids = parent_ids
@@ -363,7 +365,7 @@ class Dataset:
 def load_uniform_grid(
     *,
     data,
-    domain_dimensions,
+    domain_dimensions
 ):
     domain_dimensions = np.array(domain_dimensions)
     bbox = np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], "float64")
@@ -373,20 +375,12 @@ def load_uniform_grid(
     # First we fix our field names, apply units to data
     # and check for consistency of field shapes
 
-    new_data = {}
-    for field, val in data.items():
-        new_data[field] = val.copy()
-    data = new_data
-
     sfh = StreamDictFieldHandler()
-    sfh.update({0: data})
-    grid_left_edges = domain_left_edge
-    grid_right_edges = domain_right_edge
     grid_dimensions = domain_dimensions.reshape(1, 3).astype("int32")
 
     handler = StreamHandler(
-        left_edges=grid_left_edges,
-        right_edges=grid_right_edges,
+        left_edges=domain_left_edge,
+        right_edges=domain_right_edge,
         dimensions=grid_dimensions,
         levels=grid_levels,
         parent_ids=-np.ones(1, dtype="int64"),
@@ -394,9 +388,6 @@ def load_uniform_grid(
         processor_ids=np.zeros(1).reshape((1, 1)),
         fields=sfh,
     )
-    handler.domain_left_edge = domain_left_edge
-    handler.domain_right_edge = domain_right_edge
-
     handler.domain_dimensions = domain_dimensions
     return Dataset(stream_handler=handler)
 
