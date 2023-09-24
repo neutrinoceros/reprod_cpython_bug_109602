@@ -40,15 +40,9 @@ class FieldDetector(defaultdict):
 
     def __missing__(self, field):
         finfo = self.ds._get_field_info(field)
-        params = {}
-        permute_params = {}
-        self.field_parameters.update(params)
-
-        if not permute_params:
-            vv = finfo(self)
-        if vv is not None:
-            self[finfo.name] = vv
-            return vv
+        vv = finfo(self)
+        self[finfo.name] = vv
+        return vv
 
 
 class DerivedField:
