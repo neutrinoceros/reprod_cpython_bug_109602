@@ -84,8 +84,6 @@ class FieldInfoContainer(UserDict):
         def _TranslationFunc(field, data):
             return data[original_name].copy()
 
-        _TranslationFunc.alias_name = original_name
-
         self.add_field(alias_name, function=_TranslationFunc)
 
     def check_derived_fields(self, fields_to_check=None):
