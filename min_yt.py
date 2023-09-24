@@ -8,7 +8,7 @@ class CartesianCoordinateHandler:
     def setup_fields(self, registry):
         def _get_vert_fields(axi):
             def _vert(field, data):
-                fcoords_vertex = np.random.random((data.nd, data.nd, data.nd, 8, 3))
+                fcoords_vertex = np.random.random((32, 32, 32, 8, 3))
                 return np.array(fcoords_vertex[..., axi])
 
             return _vert
@@ -18,8 +18,6 @@ class CartesianCoordinateHandler:
 
 class FieldDetector(defaultdict):
     def __init__(self, ds):
-        nd = 32
-        self.nd = nd
         self.ds = ds
         super().__init__(lambda: 1)
 
