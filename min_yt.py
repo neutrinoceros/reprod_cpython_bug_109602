@@ -22,9 +22,7 @@ class FieldDetector(defaultdict):
         nd = 32
         self.nd = nd
         self.ds = ds
-        super().__init__(
-            lambda: 1
-        )
+        super().__init__(lambda: 1)
 
     def __missing__(self, field):
         finfo = self.ds._get_field_info(field)
