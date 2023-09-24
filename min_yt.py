@@ -164,7 +164,6 @@ class Index:
     def __init__(self, ds):
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
-        self.field_list = []
 
 
 class Dataset:
