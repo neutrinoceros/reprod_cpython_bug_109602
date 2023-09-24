@@ -319,10 +319,6 @@ class Dataset:
     _proj_type = "quad_proj"
     _determined_fields = None
 
-    # the point in index space "domain_left_edge" doesn't necessarily
-    # map to (0, 0, 0)
-    domain_offset = np.zeros(3, dtype="int64")
-
     def __init__(self, *, stream_handler):
         self.stream_handler = stream_handler
         self.domain_left_edge = stream_handler.domain_left_edge.copy()
