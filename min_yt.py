@@ -309,10 +309,8 @@ class Dataset:
             raise YTFieldNotFound
 
 
-def load_uniform_grid(*, domain_dimensions):
-    handler = StreamHandler()
-    handler.domain_dimensions = np.array(domain_dimensions)
-    return Dataset(stream_handler=handler)
+def load_uniform_grid():
+    return Dataset(stream_handler=StreamHandler())
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
