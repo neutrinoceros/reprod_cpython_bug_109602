@@ -6,8 +6,8 @@ from min_yt import Dataset, FieldInfoContainer, Coordinates
 def foo():
     ds = Dataset()
     ds.field_info = FieldInfoContainer(ds)
-    ds.coordinates = Coordinates()
-    ds.coordinates.setup_fields(ds.field_info)
+    coordinates = Coordinates()
+    coordinates.setup_fields(ds.field_info)
 
     def foo_closure(field, data):
         obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
