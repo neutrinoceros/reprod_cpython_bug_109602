@@ -23,8 +23,7 @@ class FieldDetector(defaultdict):
         self.nd = nd
         self.ds = ds
         super().__init__(
-            lambda: np.ones((nd, nd, nd), dtype="float64")
-            + 1e-4 * np.random.random((nd, nd, nd))
+            lambda: 1
         )
 
     def __missing__(self, field):
