@@ -1,7 +1,6 @@
 from collections import UserDict, defaultdict
 
 import numpy as np
-from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
 class Coordinates:
@@ -48,9 +47,6 @@ class FieldInfoContainer(UserDict):
     def add_field(self, name, function):
         self[name] = DerivedField(name, function, ds=self.ds)
 
-    def load_all_plugins(self) -> None:
-        setup_fluid_fields(self)
-
     def check_derived_fields(self):
         deps = {}
         fields_to_check = list(self.keys())
@@ -76,15 +72,3 @@ class Dataset:
             return self.field_info[ftype, fname]
         else:
             raise Exception
-
-
-def setup_fluid_fields(registry):
-    def create_vector_fields(registry) -> None:
-        def foo_closure(field, data):
-            obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
-
-        xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
-
-        registry.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
-
-    create_vector_fields(registry)
