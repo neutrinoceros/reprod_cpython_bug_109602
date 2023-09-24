@@ -20,10 +20,7 @@ class CartesianCoordinateHandler:
 
             return _vert
 
-        for axi, ax in enumerate("xyz"):
-            registry.add_field(
-                ("index", f"vertex_{ax}"), function=_get_vert_fields(axi)
-            )
+        registry.add_field(("index", "vertex_x"), function=_get_vert_fields(0))
 
 
 class FieldDetector(defaultdict):
@@ -66,8 +63,10 @@ class FieldInfoContainer(UserDict):
         self.ds = ds
 
     def setup_fluid_index_fields(self):
-        for f in ('vertex_z', 'vertex_x', 'vertex_y'):
-            self.alias(("gas", f), ("index", f))
+        def _TranslationFunc(field, data):
+            return data["index", "vertex_x"]
+
+        self.add_field(("gas", "vertex_x"), function=_TranslationFunc)
 
     def add_field(self, name, function):
         self[name] = DerivedField(name, function, ds=self.ds)
@@ -78,12 +77,6 @@ class FieldInfoContainer(UserDict):
         self.ds.field_dependencies.update(deps)
         dfl = set(deps.keys())
         self.ds.derived_field_list = sorted(dfl)
-
-    def alias(self, alias_name, original_name):
-        def _TranslationFunc(field, data):
-            return data[original_name]
-
-        self.add_field(alias_name, function=_TranslationFunc)
 
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
