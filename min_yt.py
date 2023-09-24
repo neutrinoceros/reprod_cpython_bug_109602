@@ -129,7 +129,6 @@ class FieldInfoContainer(UserDict):
 
     def check_derived_fields(self, fields_to_check=None):
         deps = {}
-        unavailable = []
         fields_to_check = fields_to_check or list(self.keys())
         for field in fields_to_check:
             fi = self[field]
@@ -144,7 +143,7 @@ class FieldInfoContainer(UserDict):
             deps[field] = fd
 
         self.ds.derived_field_list = []
-        return deps, unavailable
+        return deps, []
 
 
 class Dataset:
