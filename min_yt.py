@@ -50,7 +50,6 @@ class FieldInfoContainer(UserDict):
                 fd = FieldDetector(ds=fi.ds)
                 fd[fi.name]
             except Exception:
-                self.pop(field)
                 continue
             deps[field] = fd
         return deps
