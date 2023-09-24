@@ -3,7 +3,6 @@ from min_yt import Dataset, FieldInfoContainer
 
 def foo():
     ds = Dataset()
-    #ds.index = Index(ds)
 
     ds.field_dependencies = {}
     ds.derived_field_list = []

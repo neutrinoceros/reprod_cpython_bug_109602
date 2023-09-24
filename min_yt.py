@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import weakref
 from collections import UserDict, defaultdict
-from itertools import chain
 
 import numpy as np
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
@@ -158,11 +157,6 @@ class FieldInfoContainer(UserDict):
 
         self.ds.derived_field_list = []
         return deps, unavailable
-
-
-class Index:
-    def __init__(self, ds):
-        self.dataset = weakref.proxy(ds)
 
 
 class Dataset:
