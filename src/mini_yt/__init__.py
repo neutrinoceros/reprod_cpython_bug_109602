@@ -3,7 +3,7 @@ from collections import UserDict, defaultdict
 
 class Coordinates:
     def setup_fields(self, registry):
-        def _vert(field, data):
+        def _vert(data):
             return list(range(16**3*8))
 
         registry.add_field("c", function=_vert)
@@ -28,7 +28,7 @@ class DerivedField:
         self._function = function
 
     def __call__(self, data):
-        return self._function(self, data)
+        return self._function(data)
 
 
 class FieldInfoContainer(UserDict):
