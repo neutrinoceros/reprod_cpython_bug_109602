@@ -82,7 +82,7 @@ class FieldInfoContainer(UserDict):
 
     def alias(self, alias_name, original_name):
         def _TranslationFunc(field, data):
-            return data[original_name].copy()
+            return data[original_name]
 
         self.add_field(alias_name, function=_TranslationFunc)
 
