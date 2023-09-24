@@ -284,9 +284,6 @@ class StreamHierarchy:
 class StreamFieldInfo(FieldInfoContainer):
     known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
 
-    def setup_fluid_fields(self):
-        return
-
 
 class Dataset:
     default_fluid_type = "gas"

@@ -10,7 +10,6 @@ def foo():
     ds.derived_field_list = []
     ds.field_info = StreamFieldInfo(ds, ds.index.field_list)
     ds.coordinates.setup_fields(ds.field_info)
-    ds.field_info.setup_fluid_fields()
     ds.field_info.setup_fluid_index_fields()
 
     ds.field_info.load_all_plugins(ds.default_fluid_type)
