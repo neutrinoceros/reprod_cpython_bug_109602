@@ -219,10 +219,6 @@ class FieldInfoContainer(UserDict):
             fd.requested = set(fd.requested)
             deps[field] = fd
 
-        # now populate the derived field list with results
-        # this violates isolation principles and should be refactored
-        set(self.ds.derived_field_list).union(deps.keys())
-
         self.ds.derived_field_list = []
         return deps, unavailable
 
