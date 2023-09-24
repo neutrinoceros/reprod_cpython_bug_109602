@@ -80,8 +80,6 @@ class FieldInfoContainer(UserDict):
                 self.pop(field)
                 continue
             deps[field] = fd
-
-        self.ds.derived_field_list = []
         return deps
 
 
