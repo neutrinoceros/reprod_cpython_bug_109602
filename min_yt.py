@@ -362,11 +362,7 @@ class Dataset:
             raise YTFieldNotFound
 
 
-def load_uniform_grid(
-    *,
-    data,
-    domain_dimensions
-):
+def load_uniform_grid(*, data, domain_dimensions):
     domain_dimensions = np.array(domain_dimensions)
     bbox = np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], "float64")
     domain_left_edge = np.array(bbox[:, 0], "float64")
@@ -393,16 +389,14 @@ def load_uniform_grid(
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
-    def create_vector_fields(
-        registry
-    ) -> None:
+    def create_vector_fields(registry) -> None:
         def foo_closure(field, data):
-            obtain_relative_velocity_vector(data, (xn, yn, zn), f"bulk_velocity")
+            obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
 
         xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
 
         registry.add_field(
-            ("gas", f"velocity_spherical_radius"),
+            ("gas", "velocity_spherical_radius"),
             sampling_type="local",
             function=foo_closure,
             units="cm/s",
