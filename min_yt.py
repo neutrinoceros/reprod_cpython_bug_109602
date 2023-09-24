@@ -31,14 +31,6 @@ class FieldDetector(defaultdict):
         self.nd = nd
         self.field_parameters = {}
         self.ds = ds
-
-        class fake_index:
-            class fake_io:
-                pass
-
-            io = fake_io()
-
-        self.index = fake_index()
         self.requested = []
         self.requested_parameters = []
         super().__init__(
