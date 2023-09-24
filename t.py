@@ -17,9 +17,6 @@ def setup_fluid_fields(registry):
 
 def foo():
     ds = Dataset()
-
-    ds.field_dependencies = {}
-    ds.derived_field_list = []
     ds.field_info = FieldInfoContainer(ds)
     ds.coordinates.setup_fields(ds.field_info)
     setup_fluid_fields(ds.field_info)
