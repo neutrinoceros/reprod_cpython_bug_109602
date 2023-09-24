@@ -1,11 +1,10 @@
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
-from min_yt import Dataset, FieldInfoContainer, Coordinates
+from min_yt import Dataset, Coordinates
 
 
 def foo():
     ds = Dataset()
-    ds.field_info = FieldInfoContainer(ds)
     coordinates = Coordinates()
     coordinates.setup_fields(ds.field_info)
 

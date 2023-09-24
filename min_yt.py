@@ -56,6 +56,9 @@ class FieldInfoContainer(UserDict):
 
 
 class Dataset:
+    def __init__(self):
+        self.field_info = FieldInfoContainer(self)
+        
     def _get_field_info(self, field, /):
         ftype, fname = field
         if (ftype, fname) in self.field_info:
