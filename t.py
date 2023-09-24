@@ -1,13 +1,8 @@
-import numpy as np
-
 from min_yt import StreamFieldInfo, StreamHierarchy, load_uniform_grid
 
 
 def foo():
-    shape = (16, 16, 16)
-    ds = load_uniform_grid(
-        domain_dimensions=shape
-    )
+    ds = load_uniform_grid(domain_dimensions=(16, 16, 16))
     ds.index = StreamHierarchy(ds, dataset_type="test")
 
     # inline ds.create_field_info()

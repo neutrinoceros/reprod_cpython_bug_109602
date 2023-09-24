@@ -78,7 +78,6 @@ class FieldDetector(defaultdict):
             return self[_item]
 
 
-
 class DerivedField:
     def __init__(
         self,
