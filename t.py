@@ -8,9 +8,8 @@ def foo():
     coordinates.setup_fields(ds.field_info)
 
     def foo_closure(field, data):
-        bar(data, (xn,))
+        bar(data, (("gas", f"velocity_x"),))
 
-    xn = ("gas", f"velocity_x")
     ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
     ds.field_info.check_derived_fields()
 
