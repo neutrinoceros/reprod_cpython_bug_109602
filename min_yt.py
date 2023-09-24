@@ -21,7 +21,7 @@ class CartesianCoordinateHandler:
     def setup_fields(self, registry):
         def _get_vert_fields(axi, units="cm"):
             def _vert(field, data):
-                rv = data.ds.arr(data.fcoords_vertex[..., axi].copy())
+                rv = np.array(data.fcoords_vertex[..., axi])
                 return rv
 
             return _vert
@@ -78,8 +78,7 @@ class FieldDetector(defaultdict):
 
     @property
     def fcoords_vertex(self):
-        fc = np.random.random((self.nd, self.nd, self.nd, 8, 3))
-        return self.ds.arr(fc)
+        return np.random.random((self.nd, self.nd, self.nd, 8, 3))
 
 
 class DerivedField:
@@ -283,12 +282,9 @@ class StreamHierarchy:
         self.num_grids = None
         self._count_grids()
         self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
-        self.grid_left_edge = self.ds.arr(
-            np.zeros((self.num_grids, 3), self.float_type)
-        )
-        self.grid_right_edge = self.ds.arr(
-            np.ones((self.num_grids, 3), self.float_type)
-        )
+        self.grid_left_edge = np.zeros((self.num_grids, 3), self.float_type)
+
+        self.grid_right_edge = np.ones((self.num_grids, 3), self.float_type)
         self.grid_levels = np.zeros((self.num_grids, 1), "int32")
         self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
 
@@ -337,7 +333,6 @@ class Dataset:
         self.domain_dimensions = stream_handler.domain_dimensions
 
         self.coordinates = CartesianCoordinateHandler(self)
-        self.arr = np.array
 
     def _get_field_info(self, field, /):
         ftype, fname = field
