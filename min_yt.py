@@ -29,7 +29,6 @@ class CartesianCoordinateHandler:
 class FieldDetector(defaultdict):
     def __init__(self, nd=16, ds=None):
         self.nd = nd
-        self.field_parameters = {}
         self.ds = ds
         super().__init__(
             lambda: np.ones((nd, nd, nd), dtype="float64")
@@ -75,12 +74,11 @@ class FieldInfoContainer(UserDict):
 
     def load_all_plugins(self) -> None:
         setup_fluid_fields(self)
-        deps, unavailable = self.check_derived_fields([])
+        deps = self.check_derived_fields([])
         self.ds.field_dependencies.update(deps)
         # Note we may have duplicated
         dfl = set(self.ds.derived_field_list).union(deps.keys())
         self.ds.derived_field_list = sorted(dfl)
-        return [], unavailable
 
     def alias(self, alias_name, original_name):
         def _TranslationFunc(field, data):
@@ -103,7 +101,7 @@ class FieldInfoContainer(UserDict):
             deps[field] = fd
 
         self.ds.derived_field_list = []
-        return deps, []
+        return deps
 
 
 class Dataset:
