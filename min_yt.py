@@ -31,8 +31,6 @@ class FieldDetector(defaultdict):
         self.nd = nd
         self.field_parameters = {}
         self.ds = ds
-        self.requested = []
-        self.requested_parameters = []
         super().__init__(
             lambda: np.ones((nd, nd, nd), dtype="float64")
             + 1e-4 * np.random.random((nd, nd, nd))
@@ -113,9 +111,6 @@ class FieldInfoContainer(UserDict):
             except Exception:
                 self.pop(field)
                 continue
-            # This next bit checks that we can't somehow generate everything.
-            # We also manually update the 'requested' attribute
-            fd.requested = set(fd.requested)
             deps[field] = fd
 
         self.ds.derived_field_list = []
