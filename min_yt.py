@@ -167,7 +167,7 @@ class FieldInfoContainer(UserDict):
             fi = self[field]
             try:
                 fd = fi.get_dependencies(ds=self.ds)
-            except (NotImplementedError, YTFieldNotFound):
+            except YTFieldNotFound:
                 self.pop(field)
                 continue
             # This next bit checks that we can't somehow generate everything.
