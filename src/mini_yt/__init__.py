@@ -58,8 +58,7 @@ class Dataset:
         self.field_info = FieldInfoContainer(self)
 
     def _get_field_info(self, field, /):
-        ftype, fname = field
-        if (ftype, fname) in self.field_info:
-            return self.field_info[ftype, fname]
+        if field in self.field_info:
+            return self.field_info[field]
         else:
             raise Exception
