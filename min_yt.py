@@ -403,23 +403,18 @@ def load_uniform_grid(
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
     def create_vector_fields(
-        registry,
-        basename,
-        field_units,
-        ftype="gas",
+        registry
     ) -> None:
-        axis_order = tuple("xyz")
-
-        xn, yn, zn = ((ftype, f"{basename}_{ax}") for ax in axis_order)
-
         def foo_closure(field, data):
-            obtain_relative_velocity_vector(data, (xn, yn, zn), f"bulk_{basename}")
+            obtain_relative_velocity_vector(data, (xn, yn, zn), f"bulk_velocity")
+
+        xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
 
         registry.add_field(
-            (ftype, f"{basename}_spherical_radius"),
+            ("gas", f"velocity_spherical_radius"),
             sampling_type="local",
             function=foo_closure,
             units="cm/s",
         )
 
-    create_vector_fields(registry, "velocity", ftype)
+    create_vector_fields(registry)
