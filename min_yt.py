@@ -205,11 +205,9 @@ class FieldInfoContainer(UserDict):
 
     def load_all_plugins(self, ftype: str | None = "gas") -> None:
         loaded = []
-        for n in sorted(MINIMAL_FIELD_PLUGINS):
-            f = MINIMAL_FIELD_PLUGINS[n]
-            orig = set(self.items())
-            f(self, ftype, slice_info=self.slice_info)
-            loaded += [n for n, v in set(self.items()).difference(orig)]
+        orig = set(self.items())
+        setup_fluid_fields(self, ftype, slice_info=self.slice_info)
+        loaded += [n for n, v in set(self.items()).difference(orig)]
 
         deps, unavailable = self.check_derived_fields(loaded)
         self.ds.field_dependencies.update(deps)
@@ -442,6 +440,3 @@ def setup_fluid_fields(registry, ftype="gas", slice_info=None):
         )
 
     create_vector_fields(registry, "velocity", ftype)
-
-
-MINIMAL_FIELD_PLUGINS = {"fluid": setup_fluid_fields}
