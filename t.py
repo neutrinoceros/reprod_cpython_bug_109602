@@ -1,5 +1,5 @@
 from mini_yt import Coordinates, Dataset
-from mini_yt.lib import obtain_relative_velocity_vector
+from mini_yt.lib import bar
 
 
 def foo():
@@ -8,7 +8,7 @@ def foo():
     coordinates.setup_fields(ds.field_info)
 
     def foo_closure(field, data):
-        obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
+        bar(data, (xn, yn, zn), "bulk_velocity")
 
     xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
     ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
