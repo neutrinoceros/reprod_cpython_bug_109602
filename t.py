@@ -8,16 +8,11 @@ def foo():
     ds.field_info = FieldInfoContainer(ds)
     ds.coordinates.setup_fields(ds.field_info)
 
-    def create_vector_fields(registry) -> None:
-        def foo_closure(field, data):
-            obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
+    def foo_closure(field, data):
+        obtain_relative_velocity_vector(data, (xn, yn, zn), "bulk_velocity")
 
-        xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
-
-        ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
-
-    create_vector_fields(ds.field_info)
-
+    xn, yn, zn = (("gas", f"velocity_{ax}") for ax in "xyz")
+    ds.field_info.add_field(("gas", "velocity_spherical_radius"), function=foo_closure)
     ds.field_info.check_derived_fields()
 
 
