@@ -227,12 +227,8 @@ class FieldInfoContainer(UserDict):
         return deps, unavailable
 
 
-class StreamHierarchy:
-    float_type = "float64"
-
-    def __init__(self, ds, dataset_type=None):
-        self.dataset_type = dataset_type
-        self.float_type = "float64"
+class Index:
+    def __init__(self, ds):
         self.dataset = weakref.proxy(ds)  # for _obtain_enzo
         self.stream_handler = StreamHandler()
         self.float_type = "float64"

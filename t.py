@@ -1,9 +1,9 @@
-from min_yt import Dataset, FieldInfoContainer, StreamHierarchy
+from min_yt import Dataset, FieldInfoContainer, Index
 
 
 def foo():
     ds = Dataset()
-    ds.index = StreamHierarchy(ds, dataset_type="test")
+    ds.index = Index(ds)
 
     # inline ds.create_field_info()
     ds.field_dependencies = {}
