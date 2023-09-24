@@ -78,9 +78,8 @@ class FieldInfoContainer(UserDict):
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
         index_fields = {f for _, f in self if _ == "index"}
-        for ftype in self.ds.fluid_types:
-            for f in index_fields:
-                self.alias((ftype, f), ("index", f))
+        for f in index_fields:
+            self.alias(("gas", f), ("index", f))
 
     def add_field(self, name, function, **kwargs):
         kwargs.setdefault("ds", self.ds)
@@ -129,9 +128,6 @@ class FieldInfoContainer(UserDict):
 
 
 class Dataset:
-    default_fluid_type = "gas"
-    fluid_types = ("gas",)
-
     def __init__(self):
         self.coordinates = CartesianCoordinateHandler(self)
 
