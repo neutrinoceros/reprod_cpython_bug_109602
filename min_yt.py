@@ -229,10 +229,7 @@ class FieldInfoContainer(UserDict):
 
 class Index:
     def __init__(self, ds):
-        self.dataset = weakref.proxy(ds)  # for _obtain_enzo
         self.stream_handler = StreamHandler()
-        self.float_type = "float64"
-        self.directory = os.getcwd()
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
         fl = set(self.stream_handler.get_fields())
