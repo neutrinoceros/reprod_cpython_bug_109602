@@ -6,7 +6,7 @@ def foo():
 
     ds.field_dependencies = {}
     ds.derived_field_list = []
-    ds.field_info = FieldInfoContainer(ds, [])
+    ds.field_info = FieldInfoContainer(ds)
     ds.coordinates.setup_fields(ds.field_info)
     ds.field_info.setup_fluid_index_fields()
 

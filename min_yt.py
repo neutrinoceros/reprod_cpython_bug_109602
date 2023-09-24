@@ -44,13 +44,10 @@ class FieldDetector(defaultdict):
 
 
 class DerivedField:
-    def __init__(self, name, function, ds=None):
+    def __init__(self, name, function, ds):
         self.name = name
         self.ds = ds
-
         self._function = function
-        self.validators = []
-        self._shared_aliases_list = [self]
 
     def get_dependencies(self, *args, **kwargs):
         """
@@ -66,7 +63,7 @@ class DerivedField:
 
 
 class FieldInfoContainer(UserDict):
-    def __init__(self, ds, field_list, slice_info=None):
+    def __init__(self, ds):
         super().__init__()
         self.ds = ds
 
