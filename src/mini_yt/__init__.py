@@ -1,12 +1,10 @@
 from collections import UserDict, defaultdict
 
-import numpy as np
-
 
 class Coordinates:
     def setup_fields(self, registry):
         def _vert(field, data):
-            return np.random.random((32, 32, 32, 8))
+            return list(range(16**3*8))
 
         registry.add_field(("index", "vertex_x"), function=_vert)
 
