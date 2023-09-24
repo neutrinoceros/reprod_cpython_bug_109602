@@ -92,21 +92,6 @@ class DerivedField:
         return self._function(self, data)
 
 
-class StreamDictFieldHandler(UserDict):
-    @property
-    def all_fields(self):
-        fields = chain.from_iterable(s.keys() for s in self.values())
-        return list(set(fields))
-
-
-class StreamHandler:
-    def __init__(self):
-        self.fields = StreamDictFieldHandler()
-
-    def get_fields(self):
-        return self.fields.all_fields
-
-
 class FieldInfoContainer(UserDict):
     known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
     known_particle_fields = ()
@@ -177,7 +162,6 @@ class FieldInfoContainer(UserDict):
 
 class Index:
     def __init__(self, ds):
-        self.stream_handler = StreamHandler()
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
         self.field_list = []

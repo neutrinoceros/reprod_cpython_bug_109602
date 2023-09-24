@@ -5,7 +5,6 @@ def foo():
     ds = Dataset()
     ds.index = Index(ds)
 
-    # inline ds.create_field_info()
     ds.field_dependencies = {}
     ds.derived_field_list = []
     ds.field_info = FieldInfoContainer(ds, ds.index.field_list)
