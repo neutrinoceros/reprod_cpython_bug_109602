@@ -6,14 +6,11 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 class Coordinates:
     def setup_fields(self, registry):
-        def _get_vert_fields(axi):
-            def _vert(field, data):
-                fcoords_vertex = np.random.random((32, 32, 32, 8, 3))
-                return np.array(fcoords_vertex[..., axi])
+        def _vert(field, data):
+            fcoords_vertex = np.random.random((32, 32, 32, 8, 3))
+            return np.array(fcoords_vertex[..., 0])
 
-            return _vert
-
-        registry.add_field(("index", "vertex_x"), function=_get_vert_fields(0))
+        registry.add_field(("index", "vertex_x"), function=_vert)
 
 
 class FieldDetector(defaultdict):
