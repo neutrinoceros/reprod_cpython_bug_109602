@@ -1,8 +1,8 @@
-from min_yt import StreamFieldInfo, StreamHierarchy, load_uniform_grid
+from min_yt import StreamFieldInfo, StreamHierarchy, Dataset
 
 
 def foo():
-    ds = load_uniform_grid()
+    ds = Dataset()
     ds.index = StreamHierarchy(ds, dataset_type="test")
 
     # inline ds.create_field_info()

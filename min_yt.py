@@ -300,10 +300,6 @@ class Dataset:
             raise YTFieldNotFound
 
 
-def load_uniform_grid():
-    return Dataset()
-
-
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
     def create_vector_fields(registry) -> None:
         def foo_closure(field, data):
