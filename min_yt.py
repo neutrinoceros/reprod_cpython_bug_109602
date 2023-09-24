@@ -24,7 +24,7 @@ class CartesianCoordinateHandler:
 
 
 class FieldDetector(defaultdict):
-    def __init__(self, nd=16, ds=None):
+    def __init__(self, nd=32, ds=None):
         self.nd = nd
         self.ds = ds
         super().__init__(
