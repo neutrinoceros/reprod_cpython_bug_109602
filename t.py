@@ -22,12 +22,11 @@ def foo():
     ds.derived_field_list = []
     ds.field_info = FieldInfoContainer(ds)
     ds.coordinates.setup_fields(ds.field_info)
-    ds.field_info.setup_fluid_index_fields()
     setup_fluid_fields(ds.field_info)
     ds.field_info.check_derived_fields()
 
 
-NLOOPS = 1000
+NLOOPS = 2000
 for i in range(1, NLOOPS + 1):
     foo()
     print(f"{i}/{NLOOPS}", end="\r")
