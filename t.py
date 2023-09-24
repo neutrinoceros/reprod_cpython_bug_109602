@@ -1,4 +1,4 @@
-from min_yt import StreamFieldInfo, StreamHierarchy, Dataset
+from min_yt import FieldInfoContainer, StreamHierarchy, Dataset
 
 
 def foo():
@@ -8,7 +8,7 @@ def foo():
     # inline ds.create_field_info()
     ds.field_dependencies = {}
     ds.derived_field_list = []
-    ds.field_info = StreamFieldInfo(ds, ds.index.field_list)
+    ds.field_info = FieldInfoContainer(ds, ds.index.field_list)
     ds.coordinates.setup_fields(ds.field_info)
     ds.field_info.setup_fluid_index_fields()
 

@@ -143,7 +143,7 @@ class StreamHandler:
 
 
 class FieldInfoContainer(UserDict):
-    known_other_fields = ()
+    known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
     known_particle_fields = ()
     extra_union_fields = ()
 
@@ -279,10 +279,6 @@ class StreamHierarchy:
 
     def _setup_data_io(self):
         self.io = object()
-
-
-class StreamFieldInfo(FieldInfoContainer):
-    known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
 
 
 class Dataset:
