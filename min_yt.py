@@ -68,9 +68,6 @@ class DerivedField:
         e[self.name]
         return e
 
-    def _get_needed_parameters(self, fd):
-        return {}, {}
-
     def __call__(self, data):
         """Return the value of the field in a given *data* object."""
         return self._function(self, data)
@@ -88,8 +85,6 @@ class FieldInfoContainer(UserDict):
         # Now we get all our index types and set up aliases to them
         index_fields = {f for _, f in self if _ == "index"}
         for ftype in self.ds.fluid_types:
-            if ftype in ("index", "deposit"):
-                continue
             for f in index_fields:
                 self.alias((ftype, f), ("index", f))
 
