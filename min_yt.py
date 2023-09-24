@@ -5,9 +5,6 @@ from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
 class CartesianCoordinateHandler:
-    def __init__(self, ds):
-        self.ds = ds
-
     def setup_fields(self, registry):
         def _get_vert_fields(axi):
             def _vert(field, data):
@@ -87,7 +84,7 @@ class FieldInfoContainer(UserDict):
 
 class Dataset:
     def __init__(self):
-        self.coordinates = CartesianCoordinateHandler(self)
+        self.coordinates = CartesianCoordinateHandler()
 
     def _get_field_info(self, field, /):
         ftype, fname = field
