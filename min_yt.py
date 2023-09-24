@@ -8,10 +8,6 @@ import numpy as np
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-class YTFieldNotFound(Exception):
-    pass
-
-
 class CartesianCoordinateHandler:
     def __init__(self, ds):
         self.ds = weakref.proxy(ds)
@@ -167,7 +163,7 @@ class FieldInfoContainer(UserDict):
             fi = self[field]
             try:
                 fd = fi.get_dependencies(ds=self.ds)
-            except YTFieldNotFound:
+            except Exception:
                 self.pop(field)
                 continue
             # This next bit checks that we can't somehow generate everything.
@@ -199,7 +195,7 @@ class Dataset:
         if (ftype, fname) in self.field_info:
             return self.field_info[ftype, fname]
         else:
-            raise YTFieldNotFound
+            raise Exception
 
 
 def setup_fluid_fields(registry, ftype="gas", slice_info=None):
