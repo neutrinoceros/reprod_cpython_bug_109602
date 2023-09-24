@@ -148,8 +148,6 @@ class StreamHandler:
         particle_count,
         processor_ids,
         fields,
-        field_units,
-        code_units,
     ):
         self.left_edges = np.array(left_edges)
         self.right_edges = np.array(right_edges)
@@ -160,8 +158,6 @@ class StreamHandler:
         self.processor_ids = processor_ids
         self.num_grids = self.levels.size
         self.fields = fields
-        self.field_units = field_units
-        self.code_units = code_units
         self.io = None
         self.cell_widths = None
         self.parameters = {}
@@ -316,11 +312,7 @@ class StreamFieldInfo(FieldInfoContainer):
     known_other_fields = (("density", ("g/cm**3", ["density"], None)),)
 
     def setup_fluid_fields(self):
-        species_names = []
-        for field in self.ds.stream_handler.field_units:
-            self.ds.stream_handler.field_units[field]
-
-        self.species_names = sorted(species_names)
+        return
 
 
 class Dataset:
@@ -386,8 +378,6 @@ def load_uniform_grid(
         new_data[field] = val.copy()
     data = new_data
 
-    field_units = {field: "" for field in data}
-
     sfh = StreamDictFieldHandler()
     sfh.update({0: data})
     grid_left_edges = domain_left_edge
@@ -403,18 +393,11 @@ def load_uniform_grid(
         particle_count=np.zeros(1, dtype="int64").reshape(1, 1),
         processor_ids=np.zeros(1).reshape((1, 1)),
         fields=sfh,
-        field_units=field_units,
-        code_units=("cm", "g", "s", "cm/s", "T"),
     )
-
-    handler.name = "UniformGridData"
     handler.domain_left_edge = domain_left_edge
     handler.domain_right_edge = domain_right_edge
 
     handler.domain_dimensions = domain_dimensions
-    handler.simulation_time = 1.0
-    handler.cosmology_simulation = 0
-
     return Dataset(stream_handler=handler)
 
 
