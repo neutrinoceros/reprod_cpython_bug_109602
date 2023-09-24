@@ -45,14 +45,6 @@ class DerivedField:
         self.ds = ds
         self._function = function
 
-    def get_dependencies(self, *args, **kwargs):
-        """
-        This returns a list of names of fields that this field depends on.
-        """
-        e = FieldDetector(*args, **kwargs)
-        e[self.name]
-        return e
-
     def __call__(self, data):
         return self._function(self, data)
 
@@ -84,7 +76,8 @@ class FieldInfoContainer(UserDict):
         for field in fields_to_check:
             fi = self[field]
             try:
-                fd = fi.get_dependencies(ds=self.ds)
+                fd = FieldDetector(ds=fi.ds)
+                fd[fi.name]
             except Exception:
                 self.pop(field)
                 continue
