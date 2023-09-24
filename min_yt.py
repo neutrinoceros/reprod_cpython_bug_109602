@@ -136,8 +136,6 @@ class StreamHandler:
     def __init__(
         self,
         *,
-        left_edges,
-        right_edges,
         dimensions,
         levels,
         parent_ids,
@@ -145,10 +143,6 @@ class StreamHandler:
         processor_ids,
         fields,
     ):
-        self.left_edges = np.array(left_edges)
-        self.right_edges = np.array(right_edges)
-        self.domain_left_edge = left_edges
-        self.domain_right_edge = right_edges
         self.dimensions = dimensions
         self.levels = levels
         self.parent_ids = parent_ids
@@ -321,10 +315,6 @@ class Dataset:
 
     def __init__(self, *, stream_handler):
         self.stream_handler = stream_handler
-        self.domain_left_edge = stream_handler.domain_left_edge.copy()
-        self.domain_right_edge = stream_handler.domain_right_edge.copy()
-        self.domain_dimensions = stream_handler.domain_dimensions
-
         self.coordinates = CartesianCoordinateHandler(self)
 
     def _get_field_info(self, field, /):
@@ -338,8 +328,7 @@ class Dataset:
 def load_uniform_grid(*, domain_dimensions):
     domain_dimensions = np.array(domain_dimensions)
     bbox = np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], "float64")
-    domain_left_edge = np.array(bbox[:, 0], "float64")
-    domain_right_edge = np.array(bbox[:, 1], "float64")
+
     grid_levels = np.zeros(1, dtype="int32").reshape((1, 1))
     # First we fix our field names, apply units to data
     # and check for consistency of field shapes
@@ -348,8 +337,6 @@ def load_uniform_grid(*, domain_dimensions):
     grid_dimensions = domain_dimensions.reshape(1, 3).astype("int32")
 
     handler = StreamHandler(
-        left_edges=domain_left_edge,
-        right_edges=domain_right_edge,
         dimensions=grid_dimensions,
         levels=grid_levels,
         parent_ids=-np.ones(1, dtype="int64"),
