@@ -4,7 +4,7 @@ import numpy as np
 from yt.utilities.lib.misc_utilities import obtain_relative_velocity_vector
 
 
-class CartesianCoordinateHandler:
+class Coordinates:
     def setup_fields(self, registry):
         def _get_vert_fields(axi):
             def _vert(field, data):
@@ -79,7 +79,7 @@ class FieldInfoContainer(UserDict):
 
 class Dataset:
     def __init__(self):
-        self.coordinates = CartesianCoordinateHandler()
+        self.coordinates = Coordinates()
 
     def _get_field_info(self, field, /):
         ftype, fname = field
