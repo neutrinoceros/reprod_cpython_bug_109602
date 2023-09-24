@@ -1,0 +1,8 @@
+.python-version
+.coverage
+__pycache__
+*.so
+*.cpp
+.#.*
+*~
+*egg-info

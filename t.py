@@ -1,5 +1,5 @@
-from mini_yt.lib import obtain_relative_velocity_vector
 from mini_yt import Coordinates, Dataset
+from mini_yt.lib import obtain_relative_velocity_vector
 
 
 def foo():
