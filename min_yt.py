@@ -58,7 +58,6 @@ class DerivedField:
         return e
 
     def __call__(self, data):
-        """Return the value of the field in a given *data* object."""
         return self._function(self, data)
 
 
@@ -68,9 +67,7 @@ class FieldInfoContainer(UserDict):
         self.ds = ds
 
     def setup_fluid_index_fields(self):
-        # Now we get all our index types and set up aliases to them
-        index_fields = {f for _, f in self if _ == "index"}
-        for f in index_fields:
+        for f in ('vertex_z', 'vertex_x', 'vertex_y'):
             self.alias(("gas", f), ("index", f))
 
     def add_field(self, name, function, **kwargs):
