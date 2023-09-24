@@ -149,9 +149,6 @@ class StreamHandler:
         self.processor_ids = processor_ids
         self.num_grids = self.levels.size
         self.fields = StreamDictFieldHandler()
-        self.io = None
-        self.cell_widths = None
-        self.parameters = {}
 
     def get_fields(self):
         return self.fields.all_fields
