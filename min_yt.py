@@ -71,9 +71,6 @@ class FieldInfoContainer(UserDict):
     def __init__(self, ds, field_list, slice_info=None):
         super().__init__()
         self.ds = ds
-        self.field_list = field_list
-        self.slice_info = slice_info
-        self.field_aliases = {}
 
     def setup_fluid_index_fields(self):
         # Now we get all our index types and set up aliases to them
@@ -99,8 +96,6 @@ class FieldInfoContainer(UserDict):
         return loaded, unavailable
 
     def alias(self, alias_name, original_name):
-        self.field_aliases[alias_name] = original_name
-
         def _TranslationFunc(field, data):
             return data[original_name].copy()
 
