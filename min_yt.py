@@ -70,9 +70,8 @@ class FieldInfoContainer(UserDict):
         for f in ('vertex_z', 'vertex_x', 'vertex_y'):
             self.alias(("gas", f), ("index", f))
 
-    def add_field(self, name, function, **kwargs):
-        kwargs.setdefault("ds", self.ds)
-        self[name] = DerivedField(name, function, **kwargs)
+    def add_field(self, name, function):
+        self[name] = DerivedField(name, function, ds=self.ds)
 
     def load_all_plugins(self) -> None:
         setup_fluid_fields(self)
