@@ -9,8 +9,7 @@ class CartesianCoordinateHandler:
         def _get_vert_fields(axi):
             def _vert(field, data):
                 fcoords_vertex = np.random.random((data.nd, data.nd, data.nd, 8, 3))
-                rv = np.array(fcoords_vertex[..., axi])
-                return rv
+                return np.array(fcoords_vertex[..., axi])
 
             return _vert
 
