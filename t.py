@@ -1,4 +1,4 @@
-from min_yt import FieldInfoContainer, StreamHierarchy, Dataset
+from min_yt import Dataset, FieldInfoContainer, StreamHierarchy
 
 
 def foo():

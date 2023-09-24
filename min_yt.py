@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import weakref
 from collections import UserDict, defaultdict
-from collections.abc import Callable
 from itertools import chain
 
 import numpy as np
@@ -133,9 +132,7 @@ class StreamDictFieldHandler(UserDict):
 
 
 class StreamHandler:
-    def __init__(
-        self
-    ):
+    def __init__(self):
         self.fields = StreamDictFieldHandler()
 
     def get_fields(self):
@@ -166,7 +163,7 @@ class FieldInfoContainer(UserDict):
     def add_field(
         self,
         name,
-        function: Callable,
+        function,
         sampling_type: str,
         *,
         alias=None,
