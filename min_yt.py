@@ -41,7 +41,8 @@ class FieldDetector(defaultdict):
     def __missing__(self, item: tuple[str, str] | str):
         field = item
         finfo = self.ds._get_field_info(field)
-        params, permute_params = finfo._get_needed_parameters(self)
+        params = {}
+        permute_params = {}
         self.field_parameters.update(params)
         # For those cases where we are guessing the field type, we will
         # need to re-update -- otherwise, our item will always not have the
