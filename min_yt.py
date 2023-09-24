@@ -252,30 +252,11 @@ class StreamHierarchy:
         self._data_file = None
         self._data_mode = None
         self.num_grids = None
-        self._count_grids()
-        self.grid_dimensions = np.ones((self.num_grids, 3), "int32")
-        self.grid_left_edge = np.zeros((self.num_grids, 3), self.float_type)
-
-        self.grid_right_edge = np.ones((self.num_grids, 3), self.float_type)
-        self.grid_levels = np.zeros((self.num_grids, 1), "int32")
-        self.grid_particle_count = np.zeros((self.num_grids, 1), "int32")
-
-        self._setup_data_io()
-        self._detect_output_fields()
-
-    def _count_grids(self):
         self.num_grids = 1
-
-    def _detect_output_fields(self):
-        # NOTE: Because particle unions add to the actual field list, without
-        # having the keys in the field list itself, we need to double check
-        # here.
+        self.io = object()
         fl = set(self.stream_handler.get_fields())
         fl.update(set(getattr(self, "field_list", [])))
         self.field_list = list(fl)
-
-    def _setup_data_io(self):
-        self.io = object()
 
 
 class Dataset:
