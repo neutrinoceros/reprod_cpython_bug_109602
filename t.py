@@ -6,8 +6,7 @@ from min_yt import StreamFieldInfo, StreamHierarchy, load_uniform_grid
 def foo():
     shape = (16, 16, 16)
     ds = load_uniform_grid(
-        data={("gas", "density"): np.ones(shape)},
-        domain_dimensions=shape,
+        domain_dimensions=shape
     )
     ds.index = StreamHierarchy(ds, dataset_type="test")
 

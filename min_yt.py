@@ -21,7 +21,6 @@ class CartesianCoordinateHandler:
     def setup_fields(self, registry):
         def _get_vert_fields(axi, units="cm"):
             def _vert(field, data):
-
                 fcoords_vertex = np.random.random((data.nd, data.nd, data.nd, 8, 3))
                 rv = np.array(fcoords_vertex[..., axi])
                 return rv
@@ -341,7 +340,7 @@ class Dataset:
             raise YTFieldNotFound
 
 
-def load_uniform_grid(*, data, domain_dimensions):
+def load_uniform_grid(*, domain_dimensions):
     domain_dimensions = np.array(domain_dimensions)
     bbox = np.array([[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]], "float64")
     domain_left_edge = np.array(bbox[:, 0], "float64")
