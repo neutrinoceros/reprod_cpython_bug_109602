@@ -232,9 +232,7 @@ class Index:
         self.stream_handler = StreamHandler()
         self.dataset = weakref.proxy(ds)
         self.ds = self.dataset
-        fl = set(self.stream_handler.get_fields())
-        fl.update(set(getattr(self, "field_list", [])))
-        self.field_list = list(fl)
+        self.field_list = list(set(self.stream_handler.get_fields()))
 
 
 class Dataset:
